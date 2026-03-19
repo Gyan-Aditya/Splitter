@@ -4,4 +4,13 @@ This is a personal project focused on learning backend security best practices. 
 
 # LIFE CYCLE of Server(as of now)
 
-Browser -> Expresss Server -> Session -> Database ->middleware -> Route ->Response
+Browser -> Expresss Server -> Session -> Database ->middleware -> Route -> Response
+
+Tasks: Implemented user registration and login via local strategey using Passport.
+Event filler fixed and Authentication of session implemented.
+
+# Future Plans
+
+1. completing other routes . /dahboard, /events/create, /events/join, /events/{event_id}
+2. Completing the data flow structure and once everything in place refactoring the code for future developement and scalability.
+   (NOTE : All the works done by collaboraters should be done using new branches and not directly on the main branch. Once the work is done, create a pull request and get it reviewed by other members before merging it to the main branch.)
