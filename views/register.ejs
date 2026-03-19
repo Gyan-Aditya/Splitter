@@ -1,15 +1,24 @@
-<div class="card">
+<%- include("partials/header") %>
 
-  <h2>Create Account</h2>
+  <div class="card">
 
-  <form action="/register" method="POST">
+    <h2>Create Account</h2>
 
-    <input type="email" name="username" placeholder="Email">
+    <form action="/register" method="POST">
 
-    <input type="password" name="password" placeholder="Password">
+      <input type="email" name="username" placeholder="Email" required>
 
-    <button class="btn-primary">Register</button>
+      <input type="password" name="password" placeholder="Password" required>
 
-  </form>
+      <button class="btn-primary">Register</button>
 
-</div>
+    </form>
+
+    <p class="switch">
+      Already have an account?
+      <a href="/login">Login</a>
+    </p>
+
+  </div>
+
+  <%- include("partials/footer") %>

@@ -1,61 +1,57 @@
-<h1>
-  <%= event.name %>
-</h1>
+<%- include("partials/header") %>
 
-<p class="join-code">
-  Join Code: <strong>
-    <%= event.join_code %>
-  </strong>
-</p>
+  <h1>
+    <%= event.name %>
+  </h1>
 
-<h2>Members</h2>
+  <p class="join-code">
+    Join Code: <strong>
+      <%= event.join_code %>
+    </strong>
+  </p>
 
-<ul class="member-list">
+  <div class="event-layout">
 
-  <% members.forEach(member=> { %>
+    <div class="members">
 
-    <li>
-      <%= member.email %>
-    </li>
+      <h3>Members</h3>
 
-    <% }) %>
+      <ul>
 
-</ul>
+        <% members.forEach(member=> { %>
 
-<h2>Expenses</h2>
+          <li>
+            <%= member.email %>
+          </li>
 
-<div class="expense-list">
+          <% }) %>
 
-  <% expenses.forEach(exp=> { %>
-
-    <div class="expense-card">
-
-      <p>
-        <%= exp.description %> - ₹<%= exp.amount %>
-      </p>
-
-      <form action="/expenses/delete/<%= exp.id %>" method="POST">
-
-        <button class="btn-danger">Delete</button>
-
-      </form>
+      </ul>
 
     </div>
 
-    <% }) %>
+    <div class="expenses">
 
-</div>
+      <h3>Expenses</h3>
 
-<h3>Add Expense</h3>
+      <% expenses.forEach(exp=> { %>
 
-<form action="/expenses/add" method="POST">
+        <div class="expense-card">
 
-  <input type="hidden" name="event_id" value="<%= event.id %>">
+          <span>
+            <%= exp.description %> - ₹<%= exp.amount %>
+          </span>
 
-  <input type="text" name="description" placeholder="Dinner">
+          <form action="/expenses/delete/<%= exp.id %>" method="POST">
+            <button class="btn-danger">Delete</button>
+          </form>
 
-  <input type="number" name="amount" placeholder="Amount">
+        </div>
 
-  <button class="btn-primary">Add Expense</button>
+        <% }) %>
 
-</form>
+    </div>
+
+  </div>
+
+  <%- include("partials/footer") %>

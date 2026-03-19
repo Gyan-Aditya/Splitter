@@ -1,9 +1,18 @@
-<section class="hero">
-  <h1>Split Bills With Friends</h1>
-  <p>Track expenses for trips, dinners and events.</p>
+<%- include("partials/header") %>
 
-  <div class="hero-buttons">
-    <a class="btn-primary" href="/register">Get Started</a>
-    <a class="btn-secondary" href="/login">Login</a>
-  </div>
-</section>
+  <section class="hero">
+
+    <h1>Split Bills With Friends</h1>
+
+    <p>Track shared expenses for trips, dinners and events.</p>
+
+    <div class="hero-buttons">
+      <% if(!isAuth){ %>
+        <a class="btn-primary" href="/register">Get Started</a>
+        <a class="btn-secondary" href="/login">Login</a>
+        <% } %>
+    </div>
+
+  </section>
+
+  <%- include("partials/footer") %>

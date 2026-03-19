@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>SplitEvent</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+  <nav class="navbar">
+
+    <div class="logo">SplitEvent</div>
+
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <% if(locals.isAuth) { %>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/events/create">Create Event</a>
+        <a href="/events/join">Join Event</a>
+        <a href="/logout">Logout</a>
+        <% } %>
+
+    </div>
+
+  </nav>
+
+  <div class="container">

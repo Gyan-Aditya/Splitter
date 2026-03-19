@@ -1,14 +1,17 @@
-<div class="card">
+<%- include("partials/header") %>
 
-  <h2>Join Event</h2>
+  <div class="card">
 
-  <form action="/events/join" method="POST">
+    <h2>Join Event</h2>
 
-    <label>Join Code</label>
-    <input type="text" name="code" placeholder="Enter Event Code" required>
+    <form action="/events/join" method="POST">
 
-    <button class="btn-primary">Join Event</button>
+      <input type="text" name="code" placeholder="Enter Join Code" required>
 
-  </form>
+      <button class="btn-primary">Join</button>
 
-</div>
+    </form>
+
+  </div>
+
+  <%- include("partials/footer") %>
