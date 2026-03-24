@@ -28,6 +28,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: sessionStore,
+  cookie: {
+    maxAge: 1000 * 60,
+  }
 }));
 
 app.use(passport.initialize());
@@ -75,6 +78,13 @@ async function eventFiller(req, res, next) {
 /* ---------- ROUTES ---------- */
 
 app.get("/", eventFiller, (req, res) => {
+  if (req.session.view) {
+    req.session.view += 1;
+  }
+  else {
+    req.session.view = 1;
+  }
+  console.log(req.session.view);
   res.render("home");
 });
 

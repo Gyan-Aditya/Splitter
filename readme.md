@@ -7,7 +7,7 @@ This is a personal project focused on learning backend security best practices. 
 Browser -> Expresss Server -> Session -> Database ->middleware -> Route -> Response
 
 Tasks: Implemented user registration and login via local strategey using Passport.
-Event filler fixed and Authentication of session implemented.
+Event filler fixed and Authentication of session implemented with permanent storage.
 
 # Future Plans
 
