@@ -1,32 +1,18 @@
 <%- include("partials/header") %>
 
-  <h1>Your Events</h1>
+  <h1>Create Event</h1>
 
-  <div class="actions">
+  <div class="card">
 
-    <a class="btn-primary" href="/events/create">Create Event</a>
-    <a class="btn-secondary" href="/events/join">Join Event</a>
+    <form action="/events/create" method="POST">
 
-  </div>
+      <label>Event Name</label>
 
-  <div class="event-grid">
+      <input type="text" name="name" placeholder="Trip to Goa" required>
 
-    <% events.forEach(event=> { %>
+      <button class="btn-primary">Create Event</button>
 
-      <div class="event-card">
-
-        <h3>
-          <%= event.name %>
-        </h3>
-
-        <p>Join Code: <%= event.join_code %>
-        </p>
-
-        <a href="/events/<%= event.id %>">Open</a>
-
-      </div>
-
-      <% }) %>
+    </form>
 
   </div>
 

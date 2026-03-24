@@ -2,32 +2,45 @@
 
   <h1>Your Events</h1>
 
-  <div class="actions">
 
-    <a class="btn-primary" href="/events/create">Create Event</a>
-    <a class="btn-secondary" href="/events/join">Join Event</a>
+  <% if(events.length===0){ %>
 
-  </div>
+    <p>No events yet. Create one!</p>
 
-  <div class="event-grid">
+    <% } %>
+      <div class="event-grid">
 
-    <% events.forEach(event=> { %>
+        <% events.forEach(event=> { %>
 
-      <div class="event-card">
+          <div class="event-card">
 
-        <h3>
-          <%= event.name %>
-        </h3>
+            <h3>
+              <%= event.name %>
+            </h3>
 
-        <p>Join Code: <%= event.join_code %>
-        </p>
+            <p>Join Code: <%= event.join_code %>
+            </p>
 
-        <a href="/events/<%= event.id %>">Open</a>
+            <a href="/events/<%= event.id %>">Open</a>
+
+          </div>
+
+          <% }) %>
+
+      </div>
+      <div class="actions" style="margin-top: 15px;">
+
+        <form action="/events/create" method="GET" style="display:inline;">
+          <button class="btn-primary">Create Event</button>
+        </form>
+
+        <form action="/events/join" method="GET" style="display:inline;">
+          <button class="btn-secondary">Join Event</button>
+        </form>
 
       </div>
 
-      <% }) %>
 
-  </div>
 
-  <%- include("partials/footer") %>
+
+      <%- include("partials/footer") %>

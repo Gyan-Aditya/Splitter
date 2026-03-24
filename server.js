@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import session from "express-session";
 import passport from "passport";
 import { Strategy } from "passport-local";
+import pgSession from "connect-pg-simple";
 
 dotenv.config();
 
@@ -15,10 +16,18 @@ const app = express();
 
 db.connect();
 
+const PgSession = pgSession(session);
+
+const sessionStore = new PgSession({
+  pool: db,
+  tableName: "session"
+});
+
 app.use(session({
   secret: process.env.SECRET,
   resave: false,
   saveUninitialized: false,
+  store: sessionStore,
 }));
 
 app.use(passport.initialize());
@@ -148,7 +157,7 @@ app.get("/events/join", (req, res) => {
 
 /* ---------- PASSPORT LOCAL STRATEGY ---------- */
 
-passport.use(new Strategy(async (username, password, cb) => {
+passport.use("local", new Strategy(async (username, password, cb) => {
 
   try {
 
