@@ -9,6 +9,12 @@ Browser -> Expresss Server -> Session -> Database ->middleware -> Route -> Respo
 Tasks: Implemented user registration and login via local strategey using Passport.
 Event filler fixed and Authentication of session implemented with permanent storage.
 
+As of 31-2-26
+Added neon database to branch for easy setup of project in each device .
+checkout using
+
+- `git switch dbOnline`
+
 # Future Plans
 
 1. completing other routes . /dahboard, /events/create, /events/join, /events/{event_id}
