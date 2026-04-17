@@ -6,6 +6,7 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy } from "passport-local";
 import pgSession from "connect-pg-simple";
+import createUniqueCode from "./utility/joincodes.js"
 
 
 dotenv.config();
@@ -30,7 +31,7 @@ app.use(session({
   saveUninitialized: false,
   store: sessionStore,
   cookie: {
-    maxAge: 1000 * 60,
+    maxAge: 1000 * 60 * 60,
   }
 }));
 
@@ -55,7 +56,7 @@ app.use((req, res, next) => {
 
 async function eventFiller(req, res, next) {
   try {
-
+    req.userID = req.user.id;
     if (req.isAuthenticated()) {
 
       const eventData = await db.query(
@@ -161,8 +162,21 @@ app.get("/events/create", eventFiller, (req, res) => {
   res.render("create-event");
 });
 
-app.get("/events/join", (req, res) => {
-  res.render("join-event");
+
+app.post("/events/create", async (req, res) => {
+
+  if (!req.isAuthenticated()) {
+    return res.redirect("/login");
+  }
+
+  const joinCode = await createUniqueCode();
+
+  await db.query(
+    "INSERT INTO events (name, join_code, created_by) VALUES ($1,$2,$3)",
+    [req.body.name, joinCode, req.user.id]
+  );
+
+  res.redirect("/dashboard");
 });
 
 
@@ -206,6 +220,7 @@ passport.use("local", new Strategy(async (username, password, cb) => {
 /* ---------- SESSION SERIALIZATION ---------- */
 
 passport.serializeUser((user, cb) => {
+
   cb(null, user.id);
 });
 
