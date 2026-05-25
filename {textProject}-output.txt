@@ -1,0 +1,3065 @@
+====================================================================================================
+PROJECT EXPORT FOR LLMs
+====================================================================================================
+
+PROJECT INFORMATION:
+--------------------------------------------------
+Project Name: Splitter
+Generated On: 2026-05-25 07:50:26 (Asia/Calcutta / GMT+06:30)
+Total Files Processed: 29
+Export Tool: Easy Whole Project to Single Text File for LLMs v1.1.0
+Tool Author: Jota / José Guilherme Pandolfi
+
+EXPORT CONFIGURATION:
+--------------------------------------------------
+Language: en
+Max File Size: 1 MB
+Include Hidden Files: false
+Output Format: txt
+Notification Level: silent
+Custom File Name Pattern: {textProject}-output
+
+================================================================================
+PROJECT STRUCTURE
+================================================================================
+├── 📁 config/
+│   └── 📄 passport.js
+├── 📁 controller/
+│   ├── 📄 authController.js (759 B)
+│   ├── 📄 eventController.js (1.33 KB)
+│   └── 📄 expenseController.js
+├── 📁 middleware/
+│   └── 📄 eventLoader.js (1.16 KB)
+├── 📁 model/
+│   ├── 📄 event_members.js (371 B)
+│   ├── 📄 events.js (366 B)
+│   ├── 📄 expense.js (403 B)
+│   └── 📄 users.js (311 B)
+├── 📁 public/
+│   ├── 📁 css/
+│   │   └── 📄 style.css (1.44 KB)
+│   └── 📁 images/
+├── 📁 routes/
+│   ├── 📄 basePath.js (922 B)
+│   └── 📄 events.js (505 B)
+├── 📁 utility/
+│   └── 📄 joincodes.js (612 B)
+├── 📁 views/
+│   ├── 📁 partials/
+│   │   ├── 📄 footer.ejs (317 B)
+│   │   └── 📄 header.ejs (812 B)
+│   ├── 📄 create-event.ejs (439 B)
+│   ├── 📄 dashboard.ejs (1.4 KB)
+│   ├── 📄 event.ejs (929 B)
+│   ├── 📄 home.ejs (436 B)
+│   ├── 📄 join-event.ejs (331 B)
+│   ├── 📄 layout.ejs (536 B)
+│   ├── 📄 login.ejs (588 B)
+│   └── 📄 register.ejs (514 B)
+├── 📄 db.js (532 B)
+├── 📄 dbOnline.txt (8.03 KB)
+├── 📄 package-lock.json (57.5 KB)
+├── 📄 package.json (991 B)
+├── 📄 readme.md (1.09 KB)
+└── 📄 server.js (5.14 KB)
+
+================================================================================
+PROJECT STATISTICS
+================================================================================
+Total Files: 29
+Total Directories: 11
+Text Files: 19
+Binary Files: 10
+Total Size: 87.51 KB
+
+FILE TYPES DISTRIBUTION:
+------------------------------
+.js             : 14
+.ejs            : 10
+.json           : 2
+.css            : 1
+.txt            : 1
+.md             : 1
+
+================================================================================
+FILE CODE CONTENTS
+================================================================================
+
+
+================================================================================
+FILE: config/passport.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 0 B
+Extension: .js
+Language: javascript
+Location: config/passport.js
+Relative Path: config
+Created: 2026-03-19 15:13:24 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-03-31 02:08:10 (Asia/Calcutta / GMT+06:30)
+MD5: d41d8cd98f00b204e9800998ecf8427e
+SHA256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+
+================================================================================
+
+
+================================================================================
+FILE: controller/authController.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 759 B
+Extension: .js
+Language: javascript
+Location: controller/authController.js
+Relative Path: controller
+Created: 2026-03-19 15:14:11 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-25 07:32:24 (Asia/Calcutta / GMT+06:30)
+MD5: 90974a787d268f1a857710c4135a6b0a
+SHA256: 2fe4a389503b78a0034151e3f08f37eb15c8b0245d8b6794598463c1b4472dc2
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+import bcrypt from "bcrypt";
+
+const saltRound = Number(process.env.SALT_ROUND);
+
+async function handleRegister(req, res) {
+
+  try {
+
+    const username = req.body.username;
+    const password = req.body.password;
+
+    const dbResult = await db.query(
+      "SELECT * FROM users WHERE email=$1",
+      [username]
+    );
+
+    if (dbResult.rows.length === 0) {
+
+      const hashedPass = await bcrypt.hash(password, saltRound);
+
+      await db.query(
+        "INSERT INTO users(email,password) VALUES($1,$2)",
+        [username, hashedPass]
+      );
+
+    }
+
+    res.redirect("/login");
+
+  } catch (err) {
+
+    console.log(err);
+    res.send("Registration error");
+
+  }
+
+}
+
+export {handleRegister};
+================================================================================
+
+
+================================================================================
+FILE: controller/eventController.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 1.33 KB
+Extension: .js
+Language: javascript
+Location: controller/eventController.js
+Relative Path: controller
+Created: 2026-03-31 02:08:10 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-25 07:32:24 (Asia/Calcutta / GMT+06:30)
+MD5: 709e08a0ea9cb29201b8f7f4f6d26e5e
+SHA256: 8bde34c40ffe5cd951fc329358e6d727feffbc412251f4d7bec145135419087a
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+import createUniqueCode from "../utility/joincodes.js";
+
+async function handleCreateEvent(req, res){
+
+  if (!req.isAuthenticated()) {
+    return res.redirect("/login");
+  }
+
+  const joinCode = await createUniqueCode();
+
+  await db.query(
+    "INSERT INTO events (name, join_code, created_by) VALUES ($1,$2,$3)",
+    [req.body.name, joinCode, req.user.id]
+  );
+
+  res.redirect("/dashboard");
+}
+
+async function handleJoinEvent(req, res) {
+
+  if (!req.isAuthenticated()) {
+    return res.redirect("/login");
+  }
+  const joinCode = req.body.code;
+
+  const eventResult = await db.query(
+    "SELECT * FROM events WHERE join_code=$1",
+    [joinCode]
+  );
+
+  if (!eventResult.rows.length) {
+    return res.status(404).send("Event not found");
+  }
+
+  // Check if user is already a member
+  const memberResult = await db.query(
+    "SELECT * FROM event_members WHERE event_id=$1 AND user_id=$2",
+    [eventResult.rows[0].id, req.user.id]
+  );
+
+  if (memberResult.rows.length) {
+    return res.status(400).send("You are already a member of this event");
+  }
+
+  // Add user to event
+  await db.query(
+    "INSERT INTO event_members (event_id, user_id) VALUES ($1,$2)",
+    [eventResult.rows[0].id, req.user.id]
+  );
+
+  res.redirect("/dashboard");
+}
+
+export {handleCreateEvent, handleJoinEvent};
+================================================================================
+
+
+================================================================================
+FILE: controller/expenseController.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 0 B
+Extension: .js
+Language: javascript
+Location: controller/expenseController.js
+Relative Path: controller
+Created: 2026-03-31 02:08:10 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-03-31 02:08:10 (Asia/Calcutta / GMT+06:30)
+MD5: d41d8cd98f00b204e9800998ecf8427e
+SHA256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+
+================================================================================
+
+
+================================================================================
+FILE: middleware/eventLoader.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 1.16 KB
+Extension: .js
+Language: javascript
+Location: middleware/eventLoader.js
+Relative Path: middleware
+Created: 2026-04-21 01:57:23 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-25 07:50:26 (Asia/Calcutta / GMT+06:30)
+MD5: 531d011b5c5cca99e4c706927e0e0cc6
+SHA256: f98f9515a32a2d9756c39f34e2e393ebad8868c0be63cc8765b3756df0fc26c9
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+
+async function eventFiller(req, res, next) {
+  try {
+    // Initialize both variables to empty arrays to prevent undefined errors
+    if (!req.isAuthenticated()) {
+      return res.redirect("/login");
+    }
+    res.locals.events = [];
+    res.locals.joinedEvents = [];
+
+    req.userID = req.user.id;
+    if (req.isAuthenticated()) {
+
+      const eventData = await db.query(
+        "SELECT * FROM events WHERE created_by=$1",
+        [req.user.id]
+      );
+
+      res.locals.events = eventData.rows || [];
+
+    }
+
+    next();
+
+  } catch (err) {
+    console.log(err);
+    next();
+  }
+}
+
+async function joinedEventFiller(req, res, next) {
+  try {
+    req.userID = req.user.id;
+    if (req.isAuthenticated()) {
+      const eventData = await db.query(
+        `SELECT events.*
+         FROM events
+          JOIN event_members ON events.id = event_members.event_id
+          WHERE event_members.user_id = $1`,
+        [req.user.id]
+      );
+
+      res.locals.joinedEvents = eventData.rows || [];
+    }
+    next();
+  } catch (err) {
+    console.log(err);
+    next();
+  }
+}
+
+export { eventFiller, joinedEventFiller }; 
+================================================================================
+
+
+================================================================================
+FILE: model/event_members.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 371 B
+Extension: .js
+Language: javascript
+Location: model/event_members.js
+Relative Path: model
+Created: 2026-03-31 02:08:10 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-25 07:32:24 (Asia/Calcutta / GMT+06:30)
+MD5: f42543f5b8ed5921a294bc6d1fb0a7e9
+SHA256: e96fbe27d206e28446705820f164d9a5b93a6989f55aa100d4c84b551b89d26f
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db";
+// db.connect();
+
+async function createEventMembersTable() {
+  const event_members = await db.query(`CREATE TABLE event_members (
+     id SERIAL PRIMARY KEY,
+     event_id INTEGER REFERENCES events(id),
+     user_id INTEGER REFERENCES users(id),
+     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ )`);
+}
+
+export default event_members;
+================================================================================
+
+
+================================================================================
+FILE: model/events.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 366 B
+Extension: .js
+Language: javascript
+Location: model/events.js
+Relative Path: model
+Created: 2026-03-31 02:08:10 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-13 13:16:51 (Asia/Calcutta / GMT+06:30)
+MD5: 531e50a1407dd264a1e598d37f3bf907
+SHA256: a7313e8ffd1052fa0354e99cfcae86527987b5ef261a7c302f62388b45681211
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db";
+// db.connect();
+
+async function createEventsTable() {
+  const events = await db.query(`CREATE TABLE events (
+     id SERIAL PRIMARY KEY,
+     name TEXT NOT NULL,
+     join_code TEXT UNIQUE NOT NULL,
+     created_by INTEGER REFERENCES users(id),
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ )`);
+}
+
+export default events;
+================================================================================
+
+
+================================================================================
+FILE: model/expense.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 403 B
+Extension: .js
+Language: javascript
+Location: model/expense.js
+Relative Path: model
+Created: 2026-03-31 02:08:10 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-13 13:16:51 (Asia/Calcutta / GMT+06:30)
+MD5: e45cd15ee381fe8506ae0984d6493944
+SHA256: 5ee9fd635d022c50e001ba91145b1c4438ffa947f1ffc8cb91ab3d5d98f4beec
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db";
+// db.connect();
+
+async function createExpensesTable() {
+    const expenses = await db.query(`CREATE TABLE expenses (
+    id SERIAL PRIMARY KEY,
+    event_id INTEGER REFERENCES events(id),
+    paid_by INTEGER REFERENCES users(id),
+    amount NUMERIC NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`);
+}
+
+export default expenses;
+================================================================================
+
+
+================================================================================
+FILE: model/users.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 311 B
+Extension: .js
+Language: javascript
+Location: model/users.js
+Relative Path: model
+Created: 2026-03-31 02:08:10 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-13 13:16:51 (Asia/Calcutta / GMT+06:30)
+MD5: e938039ba07f6c9b04048c6e0695ced7
+SHA256: 6ca2acf1b98c501ef135055a74a4790a27bc669600d3f897558f83e66073f1f8
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db";
+// db.connect();
+
+async function createUsersTable() {
+	const users = await db.query(`CREATE TABLE users(
+ 	id SERIAL PRIMARY KEY,
+ 	email TEXT UNIQUE NOT NULL,
+ 	password TEXT,
+ 	google_id TEXT,
+ 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ )`);
+}
+
+export default users;
+================================================================================
+
+
+================================================================================
+FILE: public/css/style.css
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 1.44 KB
+Extension: .css
+Language: css
+Location: public/css/style.css
+Relative Path: public/css
+Created: 2026-03-19 00:16:20 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-03-22 04:29:30 (Asia/Calcutta / GMT+06:30)
+MD5: 92388c196b88de39e0b1239ed1d5dbf7
+SHA256: eba6c7ad95f942b45f9748e10f1fd090c91a9af44e3b03e4f76e2d07fc731705
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+body{
+font-family:system-ui;
+margin:0;
+background:#f5f7fb;
+}
+
+.navbar{
+display:flex;
+justify-content:space-between;
+padding:18px 40px;
+background:#111827;
+color:white;
+}
+
+.nav-links a{
+color:white;
+margin-left:20px;
+text-decoration:none;
+}
+
+.container{
+max-width:1100px;
+margin:auto;
+padding:40px;
+}
+
+.hero{
+text-align:center;
+padding:100px 20px;
+}
+
+.hero h1{
+font-size:48px;
+margin-bottom:10px;
+}
+
+.hero-buttons a{
+margin:10px;
+padding:12px 22px;
+border-radius:6px;
+text-decoration:none;
+}
+
+.btn-primary{
+background:#4f46e5;
+color:white;
+}
+
+.btn-secondary{
+background:#e5e7eb;
+color:black;
+}
+
+.card{
+background:white;
+padding:35px;
+border-radius:10px;
+box-shadow:0 10px 30px rgba(0,0,0,0.08);
+max-width:420px;
+margin:auto;
+}
+
+input{
+width:100%;
+padding:12px;
+margin:10px 0;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+button{
+padding:12px 18px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+}
+
+.event-grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+gap:20px;
+margin-top:25px;
+}
+
+.event-card{
+background:white;
+padding:20px;
+border-radius:8px;
+box-shadow:0 5px 20px rgba(0,0,0,0.05);
+}
+
+.expense-card{
+display:flex;
+justify-content:space-between;
+background:white;
+padding:12px;
+margin-bottom:10px;
+border-radius:6px;
+}
+
+.btn-danger{
+background:#ef4444;
+color:white;
+}
+
+.footer{
+text-align:center;
+padding:20px;
+color:#777;
+
+}
+================================================================================
+
+
+================================================================================
+FILE: routes/basePath.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 922 B
+Extension: .js
+Language: javascript
+Location: routes/basePath.js
+Relative Path: routes
+Created: 2026-04-21 01:57:23 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-25 07:32:24 (Asia/Calcutta / GMT+06:30)
+MD5: d655225fd7eecf4bb206262547393d27
+SHA256: 2b89e7885707e44f7219f04518882e12dc6fb155434189ade4c971374a572bc8
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import express from "express";
+import { eventFiller, joinedEventFiller } from "../middleware/eventLoader.js";
+import { handleRegister } from "../controller/authController.js";
+const router=express.Router();
+
+router.get("/", eventFiller, joinedEventFiller, (req, res) => {
+  if (req.session.view) {
+    req.session.view += 1;
+  }
+  else {
+    req.session.view = 1;
+  }
+  console.log(req.session.view);
+  res.render("home");
+});
+
+router.get("/login", (req, res) => {
+  res.render("login");
+});
+
+router.get("/register", (req, res) => {
+  res.render("register");
+});
+
+router.get("/logout", (req, res, next) => {
+  req.logout((err) => {
+    if (err) {
+      return next(err);
+    }
+    res.redirect("/");
+  });
+});
+
+router.get("/dashboard", eventFiller, joinedEventFiller, (req, res) => {
+  res.render("dashboard");
+});
+
+router.post("/register", handleRegister);
+
+
+export default router;
+================================================================================
+
+
+================================================================================
+FILE: routes/events.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 505 B
+Extension: .js
+Language: javascript
+Location: routes/events.js
+Relative Path: routes
+Created: 2026-04-21 01:57:23 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-25 07:32:24 (Asia/Calcutta / GMT+06:30)
+MD5: 5291e45fa56ab2440d0edcbe5a9590cf
+SHA256: 83bc9bc723c4eff6ed4f64804748b03be35cd701ffaef11727c4ecd81e257f88
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import express from "express";
+import { handleCreateEvent, handleJoinEvent } from "../controller/eventController.js";
+import { eventFiller } from "../middleware/eventLoader.js";
+
+const router = express.Router();
+
+router.get("/create", eventFiller, (req, res) => {
+  res.render("create-event");
+});
+
+router.post("/create", handleCreateEvent);
+
+router.get("/join", eventFiller, (req, res) => {
+  res.render("join-event");
+});
+
+router.post("/join", handleJoinEvent);
+
+export default router;
+================================================================================
+
+
+================================================================================
+FILE: utility/joincodes.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 612 B
+Extension: .js
+Language: javascript
+Location: utility/joincodes.js
+Relative Path: utility
+Created: 2026-04-13 16:48:52 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-13 16:51:33 (Asia/Calcutta / GMT+06:30)
+MD5: b9e805002a69f619f1c125a293050a29
+SHA256: 992e55723231ef045ebadf6e07df7a849b8840f214b0cded1f3b6d48d7459af4
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+
+function generateJoinCode(length = 6) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+
+  for (let i = 0; i < length; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return code;
+}
+
+async function createUniqueCode() {
+
+  let code;
+  let exists = true;
+
+  while (exists) {
+
+    code = generateJoinCode();
+
+    const result = await db.query(
+      "SELECT 1 FROM events WHERE join_code=$1",
+      [code]
+    );
+
+    exists = result.rows.length > 0;
+  }
+
+  return code;
+}
+
+export default createUniqueCode;
+================================================================================
+
+
+================================================================================
+BINARY/EXCLUDED FILES (not included in text content)
+================================================================================
+- views/partials/footer.ejs
+- views/partials/header.ejs
+
+
+================================================================================
+BINARY/EXCLUDED FILES (not included in text content)
+================================================================================
+- views/create-event.ejs
+- views/dashboard.ejs
+- views/event.ejs
+- views/home.ejs
+- views/join-event.ejs
+- views/layout.ejs
+- views/login.ejs
+- views/register.ejs
+
+
+================================================================================
+FILE: db.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 532 B
+Extension: .js
+Language: javascript
+Location: db.js
+Relative Path: root
+Created: 2026-03-31 02:08:10 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-13 13:16:51 (Asia/Calcutta / GMT+06:30)
+MD5: 66261186fd892d33a65ea4957486143d
+SHA256: b6cf86e3c9d0ba2654cda852e992d24884879eb76591e7505d555fe1a7ff8d7e
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import pkg from "pg";
+import env from "dotenv";
+// import http from "http";
+import { neon } from "@neondatabase/serverless"
+
+
+env.config();
+// const db = new pg.Pool({
+//   user: process.env.DB_USER,
+//   host: process.env.DB_HOST,
+//   database: process.env.DB_DATABASE,
+//   password: process.env.DB_PASSWORD,
+//   port: process.env.DB_PORT,
+// })
+
+const { Pool } = pkg;
+
+const db = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+export default db;
+================================================================================
+
+
+================================================================================
+FILE: dbOnline.txt
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 8.03 KB
+Extension: .txt
+Language: text
+Location: dbOnline.txt
+Relative Path: root
+Created: 2026-04-13 13:16:51 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-13 13:16:51 (Asia/Calcutta / GMT+06:30)
+MD5: 5697b734b73904871e71b84884fd21cd
+SHA256: 5830b05821c28e81f00fb6dda8836c27a62caf099c72a3a8be02d8373d95a186
+Encoding: UTF-8
+
+FILE CONTENT:
+----------------------------------------
+Reminder for online database setup file
+# 💡 AI Prompt: Connect ExpressJS to Neon Postgres
+
+**Role:** You are an expert software agent specializing in Node.js and the ExpressJS framework. Your task is to configure the current ExpressJS project to connect to a Neon Postgres database.
+
+**Purpose:** To connect the current ExpressJS project to Neon Postgres by installing a database driver, configuring environment variables, and creating a test route to validate the connection.
+
+**Scope:**
+- Must be run inside an existing Node.js project directory with ExpressJS installed.
+- Assumes the user has a Neon project and access to their full connection string.
+
+✅ Read and understand the entire instruction set before executing.
+
+---
+
+## 📋 Prerequisites
+
+- This prompt must be run inside an existing ExpressJS project directory. Do not proceed if no ExpressJS project is detected. You can identify an ExpressJS project by the presence of `express` in the `dependencies` section of `package.json`.
+- **Setup for New Projects:** If the user does not have an existing ExpressJS project, create one by running the following commands in their terminal:
+
+  ```bash
+  # mkdir my-express-app && cd my-express-app # Create folder if needed
+  npm init -y
+  npm install express
+  ```
+
+---
+
+## 🛠️ Instructions (for AI-enabled editors)
+
+When this prompt is triggered, automatically configure the open ExpressJS project as follows:
+
+### 1. Install Dependencies
+
+1.  **Prompt the user to select a PostgreSQL driver.** Present the following options, explaining the ideal use case for each:
+
+    *   **`@neondatabase/serverless` (Recommended for Serverless):** Optimized for serverless and edge functions with HTTP connections. Best choice for apps deployed on Vercel, Netlify, or AWS Lambda.
+    *   **`postgres` (postgres.js):** A fast, full-featured client, great for both serverless and traditional Node.js server environments.
+    *   **`pg` (node-postgres):** The classic, widely-used driver for traditional, long-running Node.js servers.
+
+    Make sure to ask the user to choose one of the above options and do not proceed until they provide their choice. Clearly explain the pros of each option to help them decide.
+
+2.  Based on the user's selection, run the corresponding installation command. Also install `dotenv` for managing environment variables.
+
+    ```bash
+    # For @neondatabase/serverless
+    npm install @neondatabase/serverless
+
+    # For postgres (postgres.js)
+    npm install postgres
+
+    # For pg (node-postgres)
+    npm install pg
+
+    # Install dotenv for all options
+    npm i dotenv
+    ```
+
+---
+
+### 2. Configure Environment Variables
+
+1.  Check for the presence of a `.env` file at the root of the project. If it doesn't exist, create one.
+2.  Add the following `DATABASE_URL` parameter to the `.env` file and **prompt the user to replace the placeholder value** with their complete connection string from Neon.
+
+    ```dotenv title=".env"
+    DATABASE_URL="postgresql://user:password@endpoint.neon.tech/neondb?sslmode=require&channel_binding=require"
+    ```
+
+3.  Direct the user to find this value in the **Neon Console → Project → Dashboard → Connect**.
+
+---
+
+### 3. Create an Example to Test the Connection
+
+To provide a clear way to verify the setup, create a main application file that queries the database and returns the PostgreSQL version.
+
+1.  **Locate or create the main entry point file** (usually `index.js`). If it doesn't exist, create it.
+2.  **Populate the file with the code that corresponds to the driver selected in Step 1.** This code will set up a basic Express server with a single root route (`/`) to test the database connection.
+
+    #### Option A: Using `@neondatabase/serverless`
+
+    ```javascript title="index.js"
+    require('dotenv').config();
+    const express = require('express');
+    const { neon } = require('@neondatabase/serverless');
+
+    const app = express();
+    const PORT = process.env.PORT || 3000;
+
+    const sql = neon(process.env.DATABASE_URL);
+
+    app.get('/', async (req, res) => {
+      try {
+        const [result] = await sql`SELECT version()`;
+        const version = result?.version || 'No version found';
+        res.json({
+          message: 'Connection successful!',
+          version: version,
+        });
+      } catch (error) {
+        console.error('Database query failed:', error);
+        res.status(500).json({ error: 'Failed to connect to the database.' });
+      }
+    });
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+    ```
+
+    #### Option B: Using `postgres` (postgres.js)
+
+    ```javascript title="index.js"
+    require('dotenv').config();
+    const express = require('express');
+    const postgres = require('postgres');
+
+    const app = express();
+    const PORT = process.env.PORT || 3000;
+
+    const sql = postgres(process.env.DATABASE_URL);
+
+    app.get('/', async (req, res) => {
+      try {
+        const [result] = await sql`SELECT version()`;
+        const version = result?.version || 'No version found';
+        res.json({
+          message: 'Connection successful!',
+          version: version,
+        });
+      } catch (error) {
+        console.error('Database query failed:', error);
+        res.status(500).json({ error: 'Failed to connect to the database.' });
+      }
+    });
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+    ```
+
+    #### Option C: Using `pg` (node-postgres)
+
+    ```javascript title="index.js"
+    require('dotenv').config();
+    const express = require('express');
+    const { Pool } = require('pg');
+
+    const app = express();
+    const PORT = process.env.PORT || 3000;
+
+    // Create a connection pool. The pool will manage connections for you.
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL
+    });
+
+    app.get('/', async (req, res) => {
+      let client;
+      try {
+        client = await pool.connect();
+        const { rows } = await client.query('SELECT version()');
+        const version = rows[0]?.version || 'No version found';
+        res.json({
+          message: 'Connection successful!',
+          version: version,
+        });
+      } catch (error) {
+        console.error('Database query failed:', error);
+        res.status(500).json({ error: 'Failed to connect to the database.' });
+      } finally {
+        // Make sure to release the client back to the pool
+        client?.release();
+      }
+    });
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+    ```
+
+---
+
+## 🚀 Next Steps
+
+Once the file modifications are complete:
+
+1.  Verify the user has correctly set their `DATABASE_URL` in the `.env` file. Do not proceed if placeholder values are still present.
+2.  Start the Express development server:
+    ```bash
+    node index.js
+    ```
+3.  Inform the user that the setup is complete. To test the connection, they can visit `http://localhost:3000` in their browser. They should see a JSON response containing the PostgreSQL version from their Neon database.
+
+---
+
+## ✅ Validation Rules for AI
+
+Before suggesting code or making edits, ensure:
+- A supported PostgreSQL driver (`@neondatabase/serverless`, `postgres`, or `pg`) is installed as a dependency in `package.json`.
+- A `.env` file is present or has been created with a `DATABASE_URL` placeholder.
+- An `index.js` file is present and contains a root (`/`) route handler.
+- The test route correctly imports and uses the chosen driver's syntax.
+- The connection logic is wrapped in a `try...catch` block to handle potential errors gracefully.
+
+---
+
+## ❌ Do Not
+
+- **Do not hardcode credentials** or sensitive information in any `.js` source code file. Always use `process.env`.
+- **Do not output the user's connection string** in any response or log.
+- Do not delete or modify other user-defined routes or application logic. Only add the root test route if one does not exist.
+================================================================================
+
+
+================================================================================
+FILE: package-lock.json
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 57.5 KB
+Extension: .json
+Language: json
+Location: package-lock.json
+Relative Path: root
+Created: 2026-03-18 23:48:10 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-26 12:52:11 (Asia/Calcutta / GMT+06:30)
+MD5: 03d6afa0fbf90ee809f67e33889e5815
+SHA256: c4579c21c6a80ae5d8ebdb918b1497e6fefdc01c2f988ff90417519106406c07
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+{
+  "name": "splitter",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "splitter",
+      "version": "1.0.0",
+      "license": "ISC",
+      "dependencies": {
+        "@neondatabase/serverless": "^1.0.2",
+        "axios": "^1.13.6",
+        "bcrypt": "^6.0.0",
+        "connect-pg-simple": "^10.0.0",
+        "dotenv": "^17.3.1",
+        "ejs": "^5.0.1",
+        "express": "^5.2.1",
+        "express-session": "^1.19.0",
+        "http": "^0.0.1-security",
+        "passport": "^0.7.0",
+        "passport-google-oauth2": "^0.2.0",
+        "passport-google-oidc": "^0.1.0",
+        "passport-local": "^1.0.0",
+        "pg": "^8.20.0",
+        "session": "^0.1.0"
+      }
+    },
+    "node_modules/@neondatabase/serverless": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/@neondatabase/serverless/-/serverless-1.0.2.tgz",
+      "integrity": "sha512-I5sbpSIAHiB+b6UttofhrN/UJXII+4tZPAq1qugzwCwLIL8EZLV7F/JyHUrEIiGgQpEXzpnjlJ+zwcEhheGvCw==",
+      "license": "MIT",
+      "dependencies": {
+        "@types/node": "^22.15.30",
+        "@types/pg": "^8.8.0"
+      },
+      "engines": {
+        "node": ">=19.0.0"
+      }
+    },
+    "node_modules/@types/node": {
+      "version": "22.19.15",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-22.19.15.tgz",
+      "integrity": "sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg==",
+      "license": "MIT",
+      "dependencies": {
+        "undici-types": "~6.21.0"
+      }
+    },
+    "node_modules/@types/pg": {
+      "version": "8.20.0",
+      "resolved": "https://registry.npmjs.org/@types/pg/-/pg-8.20.0.tgz",
+      "integrity": "sha512-bEPFOaMAHTEP1EzpvHTbmwR8UsFyHSKsRisLIHVMXnpNefSbGA1bD6CVy+qKjGSqmZqNqBDV2azOBo8TgkcVow==",
+      "license": "MIT",
+      "dependencies": {
+        "@types/node": "*",
+        "pg-protocol": "*",
+        "pg-types": "^2.2.0"
+      }
+    },
+    "node_modules/accepts": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/accepts/-/accepts-2.0.0.tgz",
+      "integrity": "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==",
+      "license": "MIT",
+      "dependencies": {
+        "mime-types": "^3.0.0",
+        "negotiator": "^1.0.0"
+      },
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/asynckit": {
+      "version": "0.4.0",
+      "resolved": "https://registry.npmjs.org/asynckit/-/asynckit-0.4.0.tgz",
+      "integrity": "sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==",
+      "license": "MIT"
+    },
+    "node_modules/axios": {
+      "version": "1.15.0",
+      "resolved": "https://registry.npmjs.org/axios/-/axios-1.15.0.tgz",
+      "integrity": "sha512-wWyJDlAatxk30ZJer+GeCWS209sA42X+N5jU2jy6oHTp7ufw8uzUTVFBX9+wTfAlhiJXGS0Bq7X6efruWjuK9Q==",
+      "license": "MIT",
+      "dependencies": {
+        "follow-redirects": "^1.15.11",
+        "form-data": "^4.0.5",
+        "proxy-from-env": "^2.1.0"
+      }
+    },
+    "node_modules/balanced-match": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/balanced-match/-/balanced-match-1.0.2.tgz",
+      "integrity": "sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==",
+      "license": "MIT"
+    },
+    "node_modules/base64url": {
+      "version": "3.0.1",
+      "resolved": "https://registry.npmjs.org/base64url/-/base64url-3.0.1.tgz",
+      "integrity": "sha512-ir1UPr3dkwexU7FdV8qBBbNDRUhMmIekYMFZfi+C/sLNnRESKPl23nB9b2pltqfOQNnGzsDdId90AEtG5tCx4A==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=6.0.0"
+      }
+    },
+    "node_modules/bcrypt": {
+      "version": "6.0.0",
+      "resolved": "https://registry.npmjs.org/bcrypt/-/bcrypt-6.0.0.tgz",
+      "integrity": "sha512-cU8v/EGSrnH+HnxV2z0J7/blxH8gq7Xh2JFT6Aroax7UohdmiJJlxApMxtKfuI7z68NvvVcmR78k2LbT6efhRg==",
+      "hasInstallScript": true,
+      "license": "MIT",
+      "dependencies": {
+        "node-addon-api": "^8.3.0",
+        "node-gyp-build": "^4.8.4"
+      },
+      "engines": {
+        "node": ">= 18"
+      }
+    },
+    "node_modules/body-parser": {
+      "version": "2.2.2",
+      "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.2.2.tgz",
+      "integrity": "sha512-oP5VkATKlNwcgvxi0vM0p/D3n2C3EReYVX+DNYs5TjZFn/oQt2j+4sVJtSMr18pdRr8wjTcBl6LoV+FUwzPmNA==",
+      "license": "MIT",
+      "dependencies": {
+        "bytes": "^3.1.2",
+        "content-type": "^1.0.5",
+        "debug": "^4.4.3",
+        "http-errors": "^2.0.0",
+        "iconv-lite": "^0.7.0",
+        "on-finished": "^2.4.1",
+        "qs": "^6.14.1",
+        "raw-body": "^3.0.1",
+        "type-is": "^2.0.1"
+      },
+      "engines": {
+        "node": ">=18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/brace-expansion": {
+      "version": "1.1.14",
+      "resolved": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-1.1.14.tgz",
+      "integrity": "sha512-MWPGfDxnyzKU7rNOW9SP/c50vi3xrmrua/+6hfPbCS2ABNWfx24vPidzvC7krjU/RTo235sV776ymlsMtGKj8g==",
+      "license": "MIT",
+      "dependencies": {
+        "balanced-match": "^1.0.0",
+        "concat-map": "0.0.1"
+      }
+    },
+    "node_modules/bytes": {
+      "version": "3.1.2",
+      "resolved": "https://registry.npmjs.org/bytes/-/bytes-3.1.2.tgz",
+      "integrity": "sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/call-bind-apply-helpers": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/call-bind-apply-helpers/-/call-bind-apply-helpers-1.0.2.tgz",
+      "integrity": "sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0",
+        "function-bind": "^1.1.2"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/call-bound": {
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/call-bound/-/call-bound-1.0.4.tgz",
+      "integrity": "sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bind-apply-helpers": "^1.0.2",
+        "get-intrinsic": "^1.3.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/combined-stream": {
+      "version": "1.0.8",
+      "resolved": "https://registry.npmjs.org/combined-stream/-/combined-stream-1.0.8.tgz",
+      "integrity": "sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==",
+      "license": "MIT",
+      "dependencies": {
+        "delayed-stream": "~1.0.0"
+      },
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/concat-map": {
+      "version": "0.0.1",
+      "resolved": "https://registry.npmjs.org/concat-map/-/concat-map-0.0.1.tgz",
+      "integrity": "sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==",
+      "license": "MIT"
+    },
+    "node_modules/connect-pg-simple": {
+      "version": "10.0.0",
+      "resolved": "https://registry.npmjs.org/connect-pg-simple/-/connect-pg-simple-10.0.0.tgz",
+      "integrity": "sha512-pBGVazlqiMrackzCr0eKhn4LO5trJXsOX0nQoey9wCOayh80MYtThCbq8eoLsjpiWgiok/h+1/uti9/2/Una8A==",
+      "license": "MIT",
+      "dependencies": {
+        "pg": "^8.12.0"
+      },
+      "engines": {
+        "node": "^18.18.0 || ^20.9.0 || >=22.0.0"
+      }
+    },
+    "node_modules/content-disposition": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/content-disposition/-/content-disposition-1.0.1.tgz",
+      "integrity": "sha512-oIXISMynqSqm241k6kcQ5UwttDILMK4BiurCfGEREw6+X9jkkpEe5T9FZaApyLGGOnFuyMWZpdolTXMtvEJ08Q==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/content-type": {
+      "version": "1.0.5",
+      "resolved": "https://registry.npmjs.org/content-type/-/content-type-1.0.5.tgz",
+      "integrity": "sha512-nTjqfcBFEipKdXCv4YDQWCfmcLZKm81ldF0pAopTvyrFGVbcR6P/VAAd5G7N+0tTr8QqiU0tFadD6FK4NtJwOA==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/cookie": {
+      "version": "0.7.2",
+      "resolved": "https://registry.npmjs.org/cookie/-/cookie-0.7.2.tgz",
+      "integrity": "sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/cookie-signature": {
+      "version": "1.2.2",
+      "resolved": "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.2.2.tgz",
+      "integrity": "sha512-D76uU73ulSXrD1UXF4KE2TMxVVwhsnCgfAyTg9k8P6KGZjlXKrOLe4dJQKI3Bxi5wjesZoFXJWElNWBjPZMbhg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=6.6.0"
+      }
+    },
+    "node_modules/debug": {
+      "version": "4.4.3",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
+      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
+      "license": "MIT",
+      "dependencies": {
+        "ms": "^2.1.3"
+      },
+      "engines": {
+        "node": ">=6.0"
+      },
+      "peerDependenciesMeta": {
+        "supports-color": {
+          "optional": true
+        }
+      }
+    },
+    "node_modules/delayed-stream": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/delayed-stream/-/delayed-stream-1.0.0.tgz",
+      "integrity": "sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=0.4.0"
+      }
+    },
+    "node_modules/depd": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/depd/-/depd-2.0.0.tgz",
+      "integrity": "sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/diff": {
+      "version": "4.0.4",
+      "resolved": "https://registry.npmjs.org/diff/-/diff-4.0.4.tgz",
+      "integrity": "sha512-X07nttJQkwkfKfvTPG/KSnE2OMdcUCao6+eXF3wmnIQRn2aPAHH3VxDbDOdegkd6JbPsXqShpvEOHfAT+nCNwQ==",
+      "license": "BSD-3-Clause",
+      "engines": {
+        "node": ">=0.3.1"
+      }
+    },
+    "node_modules/dotenv": {
+      "version": "17.3.1",
+      "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-17.3.1.tgz",
+      "integrity": "sha512-IO8C/dzEb6O3F9/twg6ZLXz164a2fhTnEWb95H23Dm4OuN+92NmEAlTrupP9VW6Jm3sO26tQlqyvyi4CsnY9GA==",
+      "license": "BSD-2-Clause",
+      "engines": {
+        "node": ">=12"
+      },
+      "funding": {
+        "url": "https://dotenvx.com"
+      }
+    },
+    "node_modules/dunder-proto": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/dunder-proto/-/dunder-proto-1.0.1.tgz",
+      "integrity": "sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bind-apply-helpers": "^1.0.1",
+        "es-errors": "^1.3.0",
+        "gopd": "^1.2.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/ee-first": {
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz",
+      "integrity": "sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==",
+      "license": "MIT"
+    },
+    "node_modules/ejs": {
+      "version": "5.0.1",
+      "resolved": "https://registry.npmjs.org/ejs/-/ejs-5.0.1.tgz",
+      "integrity": "sha512-COqBPFMxuPTPspXl2DkVYaDS3HtrD1GpzOGkNTJ1IYkifq/r9h8SVEFrjA3D9/VJGOEoMQcrlhpntcSUrM8k6A==",
+      "license": "Apache-2.0",
+      "bin": {
+        "ejs": "bin/cli.js"
+      },
+      "engines": {
+        "node": ">=0.12.18"
+      }
+    },
+    "node_modules/encodeurl": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.0.tgz",
+      "integrity": "sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/es-define-property": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/es-define-property/-/es-define-property-1.0.1.tgz",
+      "integrity": "sha512-e3nRfgfUZ4rNGL232gUgX06QNyyez04KdjFrF+LTRoOXmrOgFKDg4BCdsjW8EnT69eqdYGmRpJwiPVYNrCaW3g==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/es-errors": {
+      "version": "1.3.0",
+      "resolved": "https://registry.npmjs.org/es-errors/-/es-errors-1.3.0.tgz",
+      "integrity": "sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/es-object-atoms": {
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/es-object-atoms/-/es-object-atoms-1.1.1.tgz",
+      "integrity": "sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/es-set-tostringtag": {
+      "version": "2.1.0",
+      "resolved": "https://registry.npmjs.org/es-set-tostringtag/-/es-set-tostringtag-2.1.0.tgz",
+      "integrity": "sha512-j6vWzfrGVfyXxge+O0x5sh6cvxAog0a/4Rdd2K36zCMV5eJ+/+tOAngRO8cODMNWbVRdVlmGZQL2YS3yR8bIUA==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0",
+        "get-intrinsic": "^1.2.6",
+        "has-tostringtag": "^1.0.2",
+        "hasown": "^2.0.2"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/escape-html": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/escape-html/-/escape-html-1.0.3.tgz",
+      "integrity": "sha512-NiSupZ4OeuGwr68lGIeym/ksIZMJodUGOSCZ/FSnTxcrekbvqrgdUxlJOMpijaKZVjAJrWrGs/6Jy8OMuyj9ow==",
+      "license": "MIT"
+    },
+    "node_modules/etag": {
+      "version": "1.8.1",
+      "resolved": "https://registry.npmjs.org/etag/-/etag-1.8.1.tgz",
+      "integrity": "sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/express": {
+      "version": "5.2.1",
+      "resolved": "https://registry.npmjs.org/express/-/express-5.2.1.tgz",
+      "integrity": "sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==",
+      "license": "MIT",
+      "dependencies": {
+        "accepts": "^2.0.0",
+        "body-parser": "^2.2.1",
+        "content-disposition": "^1.0.0",
+        "content-type": "^1.0.5",
+        "cookie": "^0.7.1",
+        "cookie-signature": "^1.2.1",
+        "debug": "^4.4.0",
+        "depd": "^2.0.0",
+        "encodeurl": "^2.0.0",
+        "escape-html": "^1.0.3",
+        "etag": "^1.8.1",
+        "finalhandler": "^2.1.0",
+        "fresh": "^2.0.0",
+        "http-errors": "^2.0.0",
+        "merge-descriptors": "^2.0.0",
+        "mime-types": "^3.0.0",
+        "on-finished": "^2.4.1",
+        "once": "^1.4.0",
+        "parseurl": "^1.3.3",
+        "proxy-addr": "^2.0.7",
+        "qs": "^6.14.0",
+        "range-parser": "^1.2.1",
+        "router": "^2.2.0",
+        "send": "^1.1.0",
+        "serve-static": "^2.2.0",
+        "statuses": "^2.0.1",
+        "type-is": "^2.0.1",
+        "vary": "^1.1.2"
+      },
+      "engines": {
+        "node": ">= 18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/express-session": {
+      "version": "1.19.0",
+      "resolved": "https://registry.npmjs.org/express-session/-/express-session-1.19.0.tgz",
+      "integrity": "sha512-0csaMkGq+vaiZTmSMMGkfdCOabYv192VbytFypcvI0MANrp+4i/7yEkJ0sbAEhycQjntaKGzYfjfXQyVb7BHMA==",
+      "license": "MIT",
+      "dependencies": {
+        "cookie": "~0.7.2",
+        "cookie-signature": "~1.0.7",
+        "debug": "~2.6.9",
+        "depd": "~2.0.0",
+        "on-headers": "~1.1.0",
+        "parseurl": "~1.3.3",
+        "safe-buffer": "~5.2.1",
+        "uid-safe": "~2.1.5"
+      },
+      "engines": {
+        "node": ">= 0.8.0"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/express-session/node_modules/cookie-signature": {
+      "version": "1.0.7",
+      "resolved": "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.0.7.tgz",
+      "integrity": "sha512-NXdYc3dLr47pBkpUCHtKSwIOQXLVn8dZEuywboCOJY/osA0wFSLlSawr3KN8qXJEyX66FcONTH8EIlVuK0yyFA==",
+      "license": "MIT"
+    },
+    "node_modules/express-session/node_modules/debug": {
+      "version": "2.6.9",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.9.tgz",
+      "integrity": "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==",
+      "license": "MIT",
+      "dependencies": {
+        "ms": "2.0.0"
+      }
+    },
+    "node_modules/express-session/node_modules/ms": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz",
+      "integrity": "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==",
+      "license": "MIT"
+    },
+    "node_modules/eyes": {
+      "version": "0.1.8",
+      "resolved": "https://registry.npmjs.org/eyes/-/eyes-0.1.8.tgz",
+      "integrity": "sha512-GipyPsXO1anza0AOZdy69Im7hGFCNB7Y/NGjDlZGJ3GJJLtwNSb2vrzYrTYJRrRloVx7pl+bhUaTB8yiccPvFQ==",
+      "engines": {
+        "node": "> 0.1.90"
+      }
+    },
+    "node_modules/finalhandler": {
+      "version": "2.1.1",
+      "resolved": "https://registry.npmjs.org/finalhandler/-/finalhandler-2.1.1.tgz",
+      "integrity": "sha512-S8KoZgRZN+a5rNwqTxlZZePjT/4cnm0ROV70LedRHZ0p8u9fRID0hJUZQpkKLzro8LfmC8sx23bY6tVNxv8pQA==",
+      "license": "MIT",
+      "dependencies": {
+        "debug": "^4.4.0",
+        "encodeurl": "^2.0.0",
+        "escape-html": "^1.0.3",
+        "on-finished": "^2.4.1",
+        "parseurl": "^1.3.3",
+        "statuses": "^2.0.1"
+      },
+      "engines": {
+        "node": ">= 18.0.0"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/follow-redirects": {
+      "version": "1.16.0",
+      "resolved": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.0.tgz",
+      "integrity": "sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==",
+      "funding": [
+        {
+          "type": "individual",
+          "url": "https://github.com/sponsors/RubenVerborgh"
+        }
+      ],
+      "license": "MIT",
+      "engines": {
+        "node": ">=4.0"
+      },
+      "peerDependenciesMeta": {
+        "debug": {
+          "optional": true
+        }
+      }
+    },
+    "node_modules/form-data": {
+      "version": "4.0.5",
+      "resolved": "https://registry.npmjs.org/form-data/-/form-data-4.0.5.tgz",
+      "integrity": "sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==",
+      "license": "MIT",
+      "dependencies": {
+        "asynckit": "^0.4.0",
+        "combined-stream": "^1.0.8",
+        "es-set-tostringtag": "^2.1.0",
+        "hasown": "^2.0.2",
+        "mime-types": "^2.1.12"
+      },
+      "engines": {
+        "node": ">= 6"
+      }
+    },
+    "node_modules/form-data/node_modules/mime-db": {
+      "version": "1.52.0",
+      "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.52.0.tgz",
+      "integrity": "sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/form-data/node_modules/mime-types": {
+      "version": "2.1.35",
+      "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-2.1.35.tgz",
+      "integrity": "sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==",
+      "license": "MIT",
+      "dependencies": {
+        "mime-db": "1.52.0"
+      },
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/forwarded": {
+      "version": "0.2.0",
+      "resolved": "https://registry.npmjs.org/forwarded/-/forwarded-0.2.0.tgz",
+      "integrity": "sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/fresh": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/fresh/-/fresh-2.0.0.tgz",
+      "integrity": "sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/fs.realpath": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/fs.realpath/-/fs.realpath-1.0.0.tgz",
+      "integrity": "sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==",
+      "license": "ISC"
+    },
+    "node_modules/function-bind": {
+      "version": "1.1.2",
+      "resolved": "https://registry.npmjs.org/function-bind/-/function-bind-1.1.2.tgz",
+      "integrity": "sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==",
+      "license": "MIT",
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/get-intrinsic": {
+      "version": "1.3.0",
+      "resolved": "https://registry.npmjs.org/get-intrinsic/-/get-intrinsic-1.3.0.tgz",
+      "integrity": "sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bind-apply-helpers": "^1.0.2",
+        "es-define-property": "^1.0.1",
+        "es-errors": "^1.3.0",
+        "es-object-atoms": "^1.1.1",
+        "function-bind": "^1.1.2",
+        "get-proto": "^1.0.1",
+        "gopd": "^1.2.0",
+        "has-symbols": "^1.1.0",
+        "hasown": "^2.0.2",
+        "math-intrinsics": "^1.1.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/get-proto": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/get-proto/-/get-proto-1.0.1.tgz",
+      "integrity": "sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==",
+      "license": "MIT",
+      "dependencies": {
+        "dunder-proto": "^1.0.1",
+        "es-object-atoms": "^1.0.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/glob": {
+      "version": "7.2.3",
+      "resolved": "https://registry.npmjs.org/glob/-/glob-7.2.3.tgz",
+      "integrity": "sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==",
+      "deprecated": "Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me",
+      "license": "ISC",
+      "dependencies": {
+        "fs.realpath": "^1.0.0",
+        "inflight": "^1.0.4",
+        "inherits": "2",
+        "minimatch": "^3.1.1",
+        "once": "^1.3.0",
+        "path-is-absolute": "^1.0.0"
+      },
+      "engines": {
+        "node": "*"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/isaacs"
+      }
+    },
+    "node_modules/gopd": {
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/gopd/-/gopd-1.2.0.tgz",
+      "integrity": "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/has-symbols": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/has-symbols/-/has-symbols-1.1.0.tgz",
+      "integrity": "sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/has-tostringtag": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/has-tostringtag/-/has-tostringtag-1.0.2.tgz",
+      "integrity": "sha512-NqADB8VjPFLM2V0VvHUewwwsw0ZWBaIdgo+ieHtK3hasLz4qeCRjYcqfB6AQrBggRKppKF8L52/VqdVsO47Dlw==",
+      "license": "MIT",
+      "dependencies": {
+        "has-symbols": "^1.0.3"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/hasown": {
+      "version": "2.0.2",
+      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.2.tgz",
+      "integrity": "sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==",
+      "license": "MIT",
+      "dependencies": {
+        "function-bind": "^1.1.2"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/http": {
+      "version": "0.0.1-security",
+      "resolved": "https://registry.npmjs.org/http/-/http-0.0.1-security.tgz",
+      "integrity": "sha512-RnDvP10Ty9FxqOtPZuxtebw1j4L/WiqNMDtuc1YMH1XQm5TgDRaR1G9u8upL6KD1bXHSp9eSXo/ED+8Q7FAr+g=="
+    },
+    "node_modules/http-errors": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/http-errors/-/http-errors-2.0.1.tgz",
+      "integrity": "sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==",
+      "license": "MIT",
+      "dependencies": {
+        "depd": "~2.0.0",
+        "inherits": "~2.0.4",
+        "setprototypeof": "~1.2.0",
+        "statuses": "~2.0.2",
+        "toidentifier": "~1.0.1"
+      },
+      "engines": {
+        "node": ">= 0.8"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/iconv-lite": {
+      "version": "0.7.2",
+      "resolved": "https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.7.2.tgz",
+      "integrity": "sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==",
+      "license": "MIT",
+      "dependencies": {
+        "safer-buffer": ">= 2.1.2 < 3.0.0"
+      },
+      "engines": {
+        "node": ">=0.10.0"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/inflight": {
+      "version": "1.0.6",
+      "resolved": "https://registry.npmjs.org/inflight/-/inflight-1.0.6.tgz",
+      "integrity": "sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==",
+      "deprecated": "This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.",
+      "license": "ISC",
+      "dependencies": {
+        "once": "^1.3.0",
+        "wrappy": "1"
+      }
+    },
+    "node_modules/inherits": {
+      "version": "2.0.4",
+      "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz",
+      "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
+      "license": "ISC"
+    },
+    "node_modules/ipaddr.js": {
+      "version": "1.9.1",
+      "resolved": "https://registry.npmjs.org/ipaddr.js/-/ipaddr.js-1.9.1.tgz",
+      "integrity": "sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.10"
+      }
+    },
+    "node_modules/is-promise": {
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/is-promise/-/is-promise-4.0.0.tgz",
+      "integrity": "sha512-hvpoI6korhJMnej285dSg6nu1+e6uxs7zG3BYAm5byqDsgJNWwxzM6z6iZiAgQR4TJ30JmBTOwqZUw3WlyH3AQ==",
+      "license": "MIT"
+    },
+    "node_modules/math-intrinsics": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/math-intrinsics/-/math-intrinsics-1.1.0.tgz",
+      "integrity": "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/media-typer": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/media-typer/-/media-typer-1.1.0.tgz",
+      "integrity": "sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/merge-descriptors": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/merge-descriptors/-/merge-descriptors-2.0.0.tgz",
+      "integrity": "sha512-Snk314V5ayFLhp3fkUREub6WtjBfPdCPY1Ln8/8munuLuiYhsABgBVWsozAG+MWMbVEvcdcpbi9R7ww22l9Q3g==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=18"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/mime-db": {
+      "version": "1.54.0",
+      "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.54.0.tgz",
+      "integrity": "sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/mime-types": {
+      "version": "3.0.2",
+      "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-3.0.2.tgz",
+      "integrity": "sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A==",
+      "license": "MIT",
+      "dependencies": {
+        "mime-db": "^1.54.0"
+      },
+      "engines": {
+        "node": ">=18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/minimatch": {
+      "version": "3.1.5",
+      "resolved": "https://registry.npmjs.org/minimatch/-/minimatch-3.1.5.tgz",
+      "integrity": "sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w==",
+      "license": "ISC",
+      "dependencies": {
+        "brace-expansion": "^1.1.7"
+      },
+      "engines": {
+        "node": "*"
+      }
+    },
+    "node_modules/ms": {
+      "version": "2.1.3",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
+      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
+      "license": "MIT"
+    },
+    "node_modules/negotiator": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/negotiator/-/negotiator-1.0.0.tgz",
+      "integrity": "sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/node-addon-api": {
+      "version": "8.6.0",
+      "resolved": "https://registry.npmjs.org/node-addon-api/-/node-addon-api-8.6.0.tgz",
+      "integrity": "sha512-gBVjCaqDlRUk0EwoPNKzIr9KkS9041G/q31IBShPs1Xz6UTA+EXdZADbzqAJQrpDRq71CIMnOP5VMut3SL0z5Q==",
+      "license": "MIT",
+      "engines": {
+        "node": "^18 || ^20 || >= 21"
+      }
+    },
+    "node_modules/node-gyp-build": {
+      "version": "4.8.4",
+      "resolved": "https://registry.npmjs.org/node-gyp-build/-/node-gyp-build-4.8.4.tgz",
+      "integrity": "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==",
+      "license": "MIT",
+      "bin": {
+        "node-gyp-build": "bin.js",
+        "node-gyp-build-optional": "optional.js",
+        "node-gyp-build-test": "build-test.js"
+      }
+    },
+    "node_modules/oauth": {
+      "version": "0.10.2",
+      "resolved": "https://registry.npmjs.org/oauth/-/oauth-0.10.2.tgz",
+      "integrity": "sha512-JtFnB+8nxDEXgNyniwz573xxbKSOu3R8D40xQKqcjwJ2CDkYqUDI53o6IuzDJBx60Z8VKCm271+t8iFjakrl8Q==",
+      "license": "MIT"
+    },
+    "node_modules/object-inspect": {
+      "version": "1.13.4",
+      "resolved": "https://registry.npmjs.org/object-inspect/-/object-inspect-1.13.4.tgz",
+      "integrity": "sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/on-finished": {
+      "version": "2.4.1",
+      "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.4.1.tgz",
+      "integrity": "sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==",
+      "license": "MIT",
+      "dependencies": {
+        "ee-first": "1.1.1"
+      },
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/on-headers": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/on-headers/-/on-headers-1.1.0.tgz",
+      "integrity": "sha512-737ZY3yNnXy37FHkQxPzt4UZ2UWPWiCZWLvFZ4fu5cueciegX0zGPnrlY6bwRg4FdQOe9YU8MkmJwGhoMybl8A==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/once": {
+      "version": "1.4.0",
+      "resolved": "https://registry.npmjs.org/once/-/once-1.4.0.tgz",
+      "integrity": "sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==",
+      "license": "ISC",
+      "dependencies": {
+        "wrappy": "1"
+      }
+    },
+    "node_modules/parseurl": {
+      "version": "1.3.3",
+      "resolved": "https://registry.npmjs.org/parseurl/-/parseurl-1.3.3.tgz",
+      "integrity": "sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/passport": {
+      "version": "0.7.0",
+      "resolved": "https://registry.npmjs.org/passport/-/passport-0.7.0.tgz",
+      "integrity": "sha512-cPLl+qZpSc+ireUvt+IzqbED1cHHkDoVYMo30jbJIdOOjQ1MQYZBPiNvmi8UM6lJuOpTPXJGZQk0DtC4y61MYQ==",
+      "license": "MIT",
+      "dependencies": {
+        "passport-strategy": "1.x.x",
+        "pause": "0.0.1",
+        "utils-merge": "^1.0.1"
+      },
+      "engines": {
+        "node": ">= 0.4.0"
+      },
+      "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/jaredhanson"
+      }
+    },
+    "node_modules/passport-google-oauth2": {
+      "version": "0.2.0",
+      "resolved": "https://registry.npmjs.org/passport-google-oauth2/-/passport-google-oauth2-0.2.0.tgz",
+      "integrity": "sha512-62EdPtbfVdc55nIXi0p1WOa/fFMM8v/M8uQGnbcXA4OexZWCnfsEi3wo2buag+Is5oqpuHzOtI64JpHk0Xi5RQ==",
+      "license": "MIT",
+      "dependencies": {
+        "passport-oauth2": "^1.1.2"
+      }
+    },
+    "node_modules/passport-google-oidc": {
+      "version": "0.1.0",
+      "resolved": "https://registry.npmjs.org/passport-google-oidc/-/passport-google-oidc-0.1.0.tgz",
+      "integrity": "sha512-/TtFXaWvmubm5kXNoJMyzBfxhnZ0lnBPA6w6rmQMP9klmHZf0ArE8IrIEt3yAHoiDzGx4eTO7YasKQFbPsNtVA==",
+      "license": "MIT",
+      "dependencies": {
+        "passport-openidconnect": "0.1.x"
+      },
+      "engines": {
+        "node": ">= 0.4.0"
+      },
+      "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/jaredhanson"
+      }
+    },
+    "node_modules/passport-local": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/passport-local/-/passport-local-1.0.0.tgz",
+      "integrity": "sha512-9wCE6qKznvf9mQYYbgJ3sVOHmCWoUNMVFoZzNoznmISbhnNNPhN9xfY3sLmScHMetEJeoY7CXwfhCe7argfQow==",
+      "dependencies": {
+        "passport-strategy": "1.x.x"
+      },
+      "engines": {
+        "node": ">= 0.4.0"
+      }
+    },
+    "node_modules/passport-oauth2": {
+      "version": "1.8.0",
+      "resolved": "https://registry.npmjs.org/passport-oauth2/-/passport-oauth2-1.8.0.tgz",
+      "integrity": "sha512-cjsQbOrXIDE4P8nNb3FQRCCmJJ/utnFKEz2NX209f7KOHPoX18gF7gBzBbLLsj2/je4KrgiwLLGjf0lm9rtTBA==",
+      "license": "MIT",
+      "dependencies": {
+        "base64url": "3.x.x",
+        "oauth": "0.10.x",
+        "passport-strategy": "1.x.x",
+        "uid2": "0.0.x",
+        "utils-merge": "1.x.x"
+      },
+      "engines": {
+        "node": ">= 0.4.0"
+      },
+      "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/jaredhanson"
+      }
+    },
+    "node_modules/passport-openidconnect": {
+      "version": "0.1.2",
+      "resolved": "https://registry.npmjs.org/passport-openidconnect/-/passport-openidconnect-0.1.2.tgz",
+      "integrity": "sha512-JX3rTyW+KFZ/E9OF/IpXJPbyLO9vGzcmXB5FgSP2jfL3LGKJPdV7zUE8rWeKeeI/iueQggOeFa3onrCmhxXZTg==",
+      "license": "MIT",
+      "dependencies": {
+        "oauth": "0.10.x",
+        "passport-strategy": "1.x.x"
+      },
+      "engines": {
+        "node": ">= 0.6.0"
+      },
+      "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/jaredhanson"
+      }
+    },
+    "node_modules/passport-strategy": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/passport-strategy/-/passport-strategy-1.0.0.tgz",
+      "integrity": "sha512-CB97UUvDKJde2V0KDWWB3lyf6PC3FaZP7YxZ2G8OAtn9p4HI9j9JLP9qjOGZFvyl8uwNT8qM+hGnz/n16NI7oA==",
+      "engines": {
+        "node": ">= 0.4.0"
+      }
+    },
+    "node_modules/path-is-absolute": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/path-is-absolute/-/path-is-absolute-1.0.1.tgz",
+      "integrity": "sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=0.10.0"
+      }
+    },
+    "node_modules/path-to-regexp": {
+      "version": "8.4.2",
+      "resolved": "https://registry.npmjs.org/path-to-regexp/-/path-to-regexp-8.4.2.tgz",
+      "integrity": "sha512-qRcuIdP69NPm4qbACK+aDogI5CBDMi1jKe0ry5rSQJz8JVLsC7jV8XpiJjGRLLol3N+R5ihGYcrPLTno6pAdBA==",
+      "license": "MIT",
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/pause": {
+      "version": "0.0.1",
+      "resolved": "https://registry.npmjs.org/pause/-/pause-0.0.1.tgz",
+      "integrity": "sha512-KG8UEiEVkR3wGEb4m5yZkVCzigAD+cVEJck2CzYZO37ZGJfctvVptVO192MwrtPhzONn6go8ylnOdMhKqi4nfg=="
+    },
+    "node_modules/pg": {
+      "version": "8.20.0",
+      "resolved": "https://registry.npmjs.org/pg/-/pg-8.20.0.tgz",
+      "integrity": "sha512-ldhMxz2r8fl/6QkXnBD3CR9/xg694oT6DZQ2s6c/RI28OjtSOpxnPrUCGOBJ46RCUxcWdx3p6kw/xnDHjKvaRA==",
+      "license": "MIT",
+      "dependencies": {
+        "pg-connection-string": "^2.12.0",
+        "pg-pool": "^3.13.0",
+        "pg-protocol": "^1.13.0",
+        "pg-types": "2.2.0",
+        "pgpass": "1.0.5"
+      },
+      "engines": {
+        "node": ">= 16.0.0"
+      },
+      "optionalDependencies": {
+        "pg-cloudflare": "^1.3.0"
+      },
+      "peerDependencies": {
+        "pg-native": ">=3.0.1"
+      },
+      "peerDependenciesMeta": {
+        "pg-native": {
+          "optional": true
+        }
+      }
+    },
+    "node_modules/pg-cloudflare": {
+      "version": "1.3.0",
+      "resolved": "https://registry.npmjs.org/pg-cloudflare/-/pg-cloudflare-1.3.0.tgz",
+      "integrity": "sha512-6lswVVSztmHiRtD6I8hw4qP/nDm1EJbKMRhf3HCYaqud7frGysPv7FYJ5noZQdhQtN2xJnimfMtvQq21pdbzyQ==",
+      "license": "MIT",
+      "optional": true
+    },
+    "node_modules/pg-connection-string": {
+      "version": "2.12.0",
+      "resolved": "https://registry.npmjs.org/pg-connection-string/-/pg-connection-string-2.12.0.tgz",
+      "integrity": "sha512-U7qg+bpswf3Cs5xLzRqbXbQl85ng0mfSV/J0nnA31MCLgvEaAo7CIhmeyrmJpOr7o+zm0rXK+hNnT5l9RHkCkQ==",
+      "license": "MIT"
+    },
+    "node_modules/pg-int8": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/pg-int8/-/pg-int8-1.0.1.tgz",
+      "integrity": "sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==",
+      "license": "ISC",
+      "engines": {
+        "node": ">=4.0.0"
+      }
+    },
+    "node_modules/pg-pool": {
+      "version": "3.13.0",
+      "resolved": "https://registry.npmjs.org/pg-pool/-/pg-pool-3.13.0.tgz",
+      "integrity": "sha512-gB+R+Xud1gLFuRD/QgOIgGOBE2KCQPaPwkzBBGC9oG69pHTkhQeIuejVIk3/cnDyX39av2AxomQiyPT13WKHQA==",
+      "license": "MIT",
+      "peerDependencies": {
+        "pg": ">=8.0"
+      }
+    },
+    "node_modules/pg-protocol": {
+      "version": "1.13.0",
+      "resolved": "https://registry.npmjs.org/pg-protocol/-/pg-protocol-1.13.0.tgz",
+      "integrity": "sha512-zzdvXfS6v89r6v7OcFCHfHlyG/wvry1ALxZo4LqgUoy7W9xhBDMaqOuMiF3qEV45VqsN6rdlcehHrfDtlCPc8w==",
+      "license": "MIT"
+    },
+    "node_modules/pg-types": {
+      "version": "2.2.0",
+      "resolved": "https://registry.npmjs.org/pg-types/-/pg-types-2.2.0.tgz",
+      "integrity": "sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==",
+      "license": "MIT",
+      "dependencies": {
+        "pg-int8": "1.0.1",
+        "postgres-array": "~2.0.0",
+        "postgres-bytea": "~1.0.0",
+        "postgres-date": "~1.0.4",
+        "postgres-interval": "^1.1.0"
+      },
+      "engines": {
+        "node": ">=4"
+      }
+    },
+    "node_modules/pgpass": {
+      "version": "1.0.5",
+      "resolved": "https://registry.npmjs.org/pgpass/-/pgpass-1.0.5.tgz",
+      "integrity": "sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==",
+      "license": "MIT",
+      "dependencies": {
+        "split2": "^4.1.0"
+      }
+    },
+    "node_modules/postgres-array": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/postgres-array/-/postgres-array-2.0.0.tgz",
+      "integrity": "sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=4"
+      }
+    },
+    "node_modules/postgres-bytea": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/postgres-bytea/-/postgres-bytea-1.0.1.tgz",
+      "integrity": "sha512-5+5HqXnsZPE65IJZSMkZtURARZelel2oXUEO8rH83VS/hxH5vv1uHquPg5wZs8yMAfdv971IU+kcPUczi7NVBQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=0.10.0"
+      }
+    },
+    "node_modules/postgres-date": {
+      "version": "1.0.7",
+      "resolved": "https://registry.npmjs.org/postgres-date/-/postgres-date-1.0.7.tgz",
+      "integrity": "sha512-suDmjLVQg78nMK2UZ454hAG+OAW+HQPZ6n++TNDUX+L0+uUlLywnoxJKDou51Zm+zTCjrCl0Nq6J9C5hP9vK/Q==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=0.10.0"
+      }
+    },
+    "node_modules/postgres-interval": {
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/postgres-interval/-/postgres-interval-1.2.0.tgz",
+      "integrity": "sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==",
+      "license": "MIT",
+      "dependencies": {
+        "xtend": "^4.0.0"
+      },
+      "engines": {
+        "node": ">=0.10.0"
+      }
+    },
+    "node_modules/proxy-addr": {
+      "version": "2.0.7",
+      "resolved": "https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.7.tgz",
+      "integrity": "sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==",
+      "license": "MIT",
+      "dependencies": {
+        "forwarded": "0.2.0",
+        "ipaddr.js": "1.9.1"
+      },
+      "engines": {
+        "node": ">= 0.10"
+      }
+    },
+    "node_modules/proxy-from-env": {
+      "version": "2.1.0",
+      "resolved": "https://registry.npmjs.org/proxy-from-env/-/proxy-from-env-2.1.0.tgz",
+      "integrity": "sha512-cJ+oHTW1VAEa8cJslgmUZrc+sjRKgAKl3Zyse6+PV38hZe/V6Z14TbCuXcan9F9ghlz4QrFr2c92TNF82UkYHA==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=10"
+      }
+    },
+    "node_modules/qs": {
+      "version": "6.15.0",
+      "resolved": "https://registry.npmjs.org/qs/-/qs-6.15.0.tgz",
+      "integrity": "sha512-mAZTtNCeetKMH+pSjrb76NAM8V9a05I9aBZOHztWy/UqcJdQYNsf59vrRKWnojAT9Y+GbIvoTBC++CPHqpDBhQ==",
+      "license": "BSD-3-Clause",
+      "dependencies": {
+        "side-channel": "^1.1.0"
+      },
+      "engines": {
+        "node": ">=0.6"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/random-bytes": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/random-bytes/-/random-bytes-1.0.0.tgz",
+      "integrity": "sha512-iv7LhNVO047HzYR3InF6pUcUsPQiHTM1Qal51DcGSuZFBil1aBBWG5eHPNek7bvILMaYJ/8RU1e8w1AMdHmLQQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/range-parser": {
+      "version": "1.2.1",
+      "resolved": "https://registry.npmjs.org/range-parser/-/range-parser-1.2.1.tgz",
+      "integrity": "sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/raw-body": {
+      "version": "3.0.2",
+      "resolved": "https://registry.npmjs.org/raw-body/-/raw-body-3.0.2.tgz",
+      "integrity": "sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==",
+      "license": "MIT",
+      "dependencies": {
+        "bytes": "~3.1.2",
+        "http-errors": "~2.0.1",
+        "iconv-lite": "~0.7.0",
+        "unpipe": "~1.0.0"
+      },
+      "engines": {
+        "node": ">= 0.10"
+      }
+    },
+    "node_modules/router": {
+      "version": "2.2.0",
+      "resolved": "https://registry.npmjs.org/router/-/router-2.2.0.tgz",
+      "integrity": "sha512-nLTrUKm2UyiL7rlhapu/Zl45FwNgkZGaCpZbIHajDYgwlJCOzLSk+cIPAnsEqV955GjILJnKbdQC1nVPz+gAYQ==",
+      "license": "MIT",
+      "dependencies": {
+        "debug": "^4.4.0",
+        "depd": "^2.0.0",
+        "is-promise": "^4.0.0",
+        "parseurl": "^1.3.3",
+        "path-to-regexp": "^8.0.0"
+      },
+      "engines": {
+        "node": ">= 18"
+      }
+    },
+    "node_modules/safe-buffer": {
+      "version": "5.2.1",
+      "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz",
+      "integrity": "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==",
+      "funding": [
+        {
+          "type": "github",
+          "url": "https://github.com/sponsors/feross"
+        },
+        {
+          "type": "patreon",
+          "url": "https://www.patreon.com/feross"
+        },
+        {
+          "type": "consulting",
+          "url": "https://feross.org/support"
+        }
+      ],
+      "license": "MIT"
+    },
+    "node_modules/safer-buffer": {
+      "version": "2.1.2",
+      "resolved": "https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz",
+      "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==",
+      "license": "MIT"
+    },
+    "node_modules/send": {
+      "version": "1.2.1",
+      "resolved": "https://registry.npmjs.org/send/-/send-1.2.1.tgz",
+      "integrity": "sha512-1gnZf7DFcoIcajTjTwjwuDjzuz4PPcY2StKPlsGAQ1+YH20IRVrBaXSWmdjowTJ6u8Rc01PoYOGHXfP1mYcZNQ==",
+      "license": "MIT",
+      "dependencies": {
+        "debug": "^4.4.3",
+        "encodeurl": "^2.0.0",
+        "escape-html": "^1.0.3",
+        "etag": "^1.8.1",
+        "fresh": "^2.0.0",
+        "http-errors": "^2.0.1",
+        "mime-types": "^3.0.2",
+        "ms": "^2.1.3",
+        "on-finished": "^2.4.1",
+        "range-parser": "^1.2.1",
+        "statuses": "^2.0.2"
+      },
+      "engines": {
+        "node": ">= 18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/serve-static": {
+      "version": "2.2.1",
+      "resolved": "https://registry.npmjs.org/serve-static/-/serve-static-2.2.1.tgz",
+      "integrity": "sha512-xRXBn0pPqQTVQiC8wyQrKs2MOlX24zQ0POGaj0kultvoOCstBQM5yvOhAVSUwOMjQtTvsPWoNCHfPGwaaQJhTw==",
+      "license": "MIT",
+      "dependencies": {
+        "encodeurl": "^2.0.0",
+        "escape-html": "^1.0.3",
+        "parseurl": "^1.3.3",
+        "send": "^1.2.0"
+      },
+      "engines": {
+        "node": ">= 18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/session": {
+      "version": "0.1.0",
+      "resolved": "https://registry.npmjs.org/session/-/session-0.1.0.tgz",
+      "integrity": "sha512-rWQtVE5G+t/dg7wP6HB4wwCTaN4iDR7UW57KpLvf4bJGHqUuYo7z5WUSBdXvgNSBbrtuP1dLig1UjYDQ4SHm+g==",
+      "dependencies": {
+        "vows": "*"
+      },
+      "engines": {
+        "node": "*"
+      }
+    },
+    "node_modules/setprototypeof": {
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz",
+      "integrity": "sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==",
+      "license": "ISC"
+    },
+    "node_modules/side-channel": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/side-channel/-/side-channel-1.1.0.tgz",
+      "integrity": "sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0",
+        "object-inspect": "^1.13.3",
+        "side-channel-list": "^1.0.0",
+        "side-channel-map": "^1.0.1",
+        "side-channel-weakmap": "^1.0.2"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/side-channel-list": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/side-channel-list/-/side-channel-list-1.0.0.tgz",
+      "integrity": "sha512-FCLHtRD/gnpCiCHEiJLOwdmFP+wzCmDEkc9y7NsYxeF4u7Btsn1ZuwgwJGxImImHicJArLP4R0yX4c2KCrMrTA==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0",
+        "object-inspect": "^1.13.3"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/side-channel-map": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/side-channel-map/-/side-channel-map-1.0.1.tgz",
+      "integrity": "sha512-VCjCNfgMsby3tTdo02nbjtM/ewra6jPHmpThenkTYh8pG9ucZ/1P8So4u4FGBek/BjpOVsDCMoLA/iuBKIFXRA==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bound": "^1.0.2",
+        "es-errors": "^1.3.0",
+        "get-intrinsic": "^1.2.5",
+        "object-inspect": "^1.13.3"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/side-channel-weakmap": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/side-channel-weakmap/-/side-channel-weakmap-1.0.2.tgz",
+      "integrity": "sha512-WPS/HvHQTYnHisLo9McqBHOJk2FkHO/tlpvldyrnem4aeQp4hai3gythswg6p01oSoTl58rcpiFAjF2br2Ak2A==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bound": "^1.0.2",
+        "es-errors": "^1.3.0",
+        "get-intrinsic": "^1.2.5",
+        "object-inspect": "^1.13.3",
+        "side-channel-map": "^1.0.1"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/split2": {
+      "version": "4.2.0",
+      "resolved": "https://registry.npmjs.org/split2/-/split2-4.2.0.tgz",
+      "integrity": "sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==",
+      "license": "ISC",
+      "engines": {
+        "node": ">= 10.x"
+      }
+    },
+    "node_modules/statuses": {
+      "version": "2.0.2",
+      "resolved": "https://registry.npmjs.org/statuses/-/statuses-2.0.2.tgz",
+      "integrity": "sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/toidentifier": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/toidentifier/-/toidentifier-1.0.1.tgz",
+      "integrity": "sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=0.6"
+      }
+    },
+    "node_modules/type-is": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/type-is/-/type-is-2.0.1.tgz",
+      "integrity": "sha512-OZs6gsjF4vMp32qrCbiVSkrFmXtG/AZhY3t0iAMrMBiAZyV9oALtXO8hsrHbMXF9x6L3grlFuwW2oAz7cav+Gw==",
+      "license": "MIT",
+      "dependencies": {
+        "content-type": "^1.0.5",
+        "media-typer": "^1.1.0",
+        "mime-types": "^3.0.0"
+      },
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/uid-safe": {
+      "version": "2.1.5",
+      "resolved": "https://registry.npmjs.org/uid-safe/-/uid-safe-2.1.5.tgz",
+      "integrity": "sha512-KPHm4VL5dDXKz01UuEd88Df+KzynaohSL9fBh096KWAxSKZQDI2uBrVqtvRM4rwrIrRRKsdLNML/lnaaVSRioA==",
+      "license": "MIT",
+      "dependencies": {
+        "random-bytes": "~1.0.0"
+      },
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/uid2": {
+      "version": "0.0.4",
+      "resolved": "https://registry.npmjs.org/uid2/-/uid2-0.0.4.tgz",
+      "integrity": "sha512-IevTus0SbGwQzYh3+fRsAMTVVPOoIVufzacXcHPmdlle1jUpq7BRL+mw3dgeLanvGZdwwbWhRV6XrcFNdBmjWA==",
+      "license": "MIT"
+    },
+    "node_modules/undici-types": {
+      "version": "6.21.0",
+      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-6.21.0.tgz",
+      "integrity": "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==",
+      "license": "MIT"
+    },
+    "node_modules/unpipe": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/unpipe/-/unpipe-1.0.0.tgz",
+      "integrity": "sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/utils-merge": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/utils-merge/-/utils-merge-1.0.1.tgz",
+      "integrity": "sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4.0"
+      }
+    },
+    "node_modules/vary": {
+      "version": "1.1.2",
+      "resolved": "https://registry.npmjs.org/vary/-/vary-1.1.2.tgz",
+      "integrity": "sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/vows": {
+      "version": "0.8.3",
+      "resolved": "https://registry.npmjs.org/vows/-/vows-0.8.3.tgz",
+      "integrity": "sha512-PVIxa/ovXhrw5gA3mz6M+ZF3PHlqX4tutR2p/y9NWPAaFVKcWBE8b2ktfr0opQM/qFmcOVWKjSCJVjnYOvjXhw==",
+      "license": "MIT",
+      "dependencies": {
+        "diff": "^4.0.1",
+        "eyes": "~0.1.6",
+        "glob": "^7.1.2"
+      },
+      "bin": {
+        "vows": "bin/vows"
+      }
+    },
+    "node_modules/wrappy": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz",
+      "integrity": "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==",
+      "license": "ISC"
+    },
+    "node_modules/xtend": {
+      "version": "4.0.2",
+      "resolved": "https://registry.npmjs.org/xtend/-/xtend-4.0.2.tgz",
+      "integrity": "sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=0.4"
+      }
+    }
+  }
+}
+
+================================================================================
+
+
+================================================================================
+FILE: package.json
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 991 B
+Extension: .json
+Language: json
+Location: package.json
+Relative Path: root
+Created: 2026-03-18 22:21:41 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-26 12:51:53 (Asia/Calcutta / GMT+06:30)
+MD5: 7be5686cedfee92e220602880f6a775a
+SHA256: f2292e8cc88907d6ab923fdf05c6a96aa3a34fb8d1d8d4cb1e98cb02d9615b2e
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+{
+  "name": "splitter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TLxGHOST/Splitter.git"
+  },
+  "keywords": [],
+  "author": "TLxGHOST",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/TLxGHOST/Splitter/issues"
+  },
+  "homepage": "https://github.com/TLxGHOST/Splitter#readme",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "axios": "^1.13.6",
+    "bcrypt": "^6.0.0",
+    "connect-pg-simple": "^10.0.0",
+    "dotenv": "^17.3.1",
+    "ejs": "^5.0.1",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "http": "^0.0.1-security",
+    "passport": "^0.7.0",
+    "passport-google-oidc": "^0.1.0",
+    "passport-google-oauth2": "^0.2.0",
+    "passport-local": "^1.0.0",
+    "pg": "^8.20.0",
+    "session": "^0.1.0"
+  }
+}
+
+================================================================================
+
+
+================================================================================
+FILE: readme.md
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 1.09 KB
+Extension: .md
+Language: text
+Location: readme.md
+Relative Path: root
+Created: 2026-03-18 22:24:03 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-03-31 12:02:44 (Asia/Calcutta / GMT+06:30)
+MD5: b52af07994d85ebdc2aacf8e0bea47be
+SHA256: 13f75224b0d83793c2ef4488f0b11cb8697acc893b54d62003fcf8045a0a6b18
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+# Introduction
+
+This is a personal project focused on learning backend security best practices. Built with Express.js and Node.js, it solves bill-splitting problems between friends on trips and occasions.
+
+# LIFE CYCLE of Server(as of now)
+
+Browser -> Expresss Server -> Session -> Database ->middleware -> Route -> Response
+
+Tasks: Implemented user registration and login via local strategey using Passport.
+Event filler fixed and Authentication of session implemented with permanent storage.
+
+As of 31-2-26
+Added neon database to branch for easy setup of project in each device .
+checkout using
+
+- `git switch dbOnline`
+
+# Future Plans
+
+1. completing other routes . /dahboard, /events/create, /events/join, /events/{event_id}
+2. Completing the data flow structure and once everything in place refactoring the code for future developement and scalability.
+   (NOTE : All the works done by collaboraters should be done using new branches and not directly on the main branch. Once the work is done, create a pull request and get it reviewed by other members before merging it to the main branch.)
+
+================================================================================
+
+
+================================================================================
+FILE: server.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 5.14 KB
+Extension: .js
+Language: javascript
+Location: server.js
+Relative Path: root
+Created: 2026-03-18 23:45:41 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-25 07:47:24 (Asia/Calcutta / GMT+06:30)
+MD5: f9ab44defc2052d39cf46a1fbf114eea
+SHA256: 7187614c8acd5854460171ada65e1426d6d1cf73d9c01d64a5ebc5b22e95e6e1
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import express from "express";
+import dotenv from "dotenv";
+import db from "./db.js";
+import bcrypt from "bcrypt";
+import session from "express-session";
+import passport from "passport";
+import { Strategy } from "passport-local";
+import pgSession from "connect-pg-simple";
+import createUniqueCode from "./utility/joincodes.js"
+import eventsRouter from "./routes/events.js";
+import staticRouter from "./routes/basePath.js";
+import { eventFiller } from "./middleware/eventLoader.js";
+import GoogleStrategy from "passport-google-oauth2";
+
+
+dotenv.config();
+
+
+const PORT = process.env.PORT || 3000;
+const saltRound = Number(process.env.SALT_ROUND);
+
+const app = express();
+
+// db.connect();
+
+const PgSession = pgSession(session);
+
+const sessionStore = new PgSession({
+  pool: db,
+  tableName: "session"
+});
+
+app.use(session({
+  secret: process.env.SECRET,
+  resave: false,
+  saveUninitialized: false,
+  store: sessionStore,
+  cookie: {
+    maxAge: 1000 * 60 * 60,
+  }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.set("view engine", "ejs");
+app.use(express.static("public"));
+app.use(express.urlencoded({ extended: true }));
+
+
+/* ---------- GLOBAL TEMPLATE VARIABLES ---------- */
+
+app.use((req, res, next) => {
+  res.locals.isAuth = req.isAuthenticated();
+  res.locals.events = [];
+  next();
+});
+
+
+/* ---------- EVENT LOADER MIDDLEWARE ---------- */
+
+
+
+
+/* ---------- ROUTES ---------- */
+
+app.use("/", staticRouter);
+
+app.post("/login",
+  passport.authenticate("local", {
+    successRedirect: "/dashboard",
+    failureRedirect: "/login"
+  })
+);
+
+app.get("/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+app.get("/auth/google/callback",
+  passport.authenticate("google", {
+    successRedirect: "/dashboard",
+    failureRedirect: "/login"
+  })
+);
+
+
+/* ---------- REGISTER USER ---------- */
+
+
+
+/* ---------- DASHBOARD ---------- */
+
+app.use("/events", eventsRouter);
+
+// opening an event when event exists
+app.get("/events/:id", eventFiller, async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.redirect("/login");
+  }
+
+  // -----------------------------------
+  const eventID = Number(req.params.id);
+
+  if (!Number.isInteger(eventID)) {
+    return res.status(400).send("Invalid event id");
+  }
+
+  try {
+    const eventResult = await db.query(
+      "SELECT * FROM events WHERE id=$1",
+      [eventID]
+    );
+
+    if (!eventResult.rows.length) {
+      return res.status(404).send("Event not found");
+    }
+
+    const membersResult = await db.query(
+      `SELECT users.id, users.email
+       FROM event_members
+       JOIN users ON users.id = event_members.user_id
+       WHERE event_members.event_id = $1`,
+      [eventID]
+    );
+    // ---------------------------------
+    const expensesResult = await db.query(
+      `SELECT id, description, amount
+       FROM expenses
+       WHERE event_id = $1
+       ORDER BY created_at DESC`,
+      [eventID]
+    );
+
+    res.render("event", {
+      event: eventResult.rows[0],
+      members: membersResult.rows,
+      expenses: expensesResult.rows
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error loading event");
+  }
+});
+
+/* ---------- PASSPORT LOCAL STRATEGY ---------- */
+
+passport.use("local", new Strategy(async (username, password, cb) => {
+
+  try {
+
+    const result = await db.query(
+      "SELECT * FROM users WHERE email=$1",
+      [username]
+    );
+
+    if (!result.rows.length) {
+      return cb(null, false);
+    }
+
+    const userData = result.rows[0];
+
+    const validLogin = await bcrypt.compare(
+      password,
+      userData.password
+    );
+
+    if (validLogin) {
+      return cb(null, userData);
+    }
+
+    return cb(null, false);
+
+  } catch (err) {
+
+    return cb(err);
+
+  }
+
+}));
+
+/*----------- pAssport Google authentication ----------------- */
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: "/auth/google/callback"
+},
+  async (accessToken, refreshToken, profile, done) => {
+
+    try {
+
+      // check if user already exists
+      const user = await db.query(
+        "SELECT * FROM users WHERE google_id = $1",
+        [profile.id]
+      );
+
+      if (user.rows.length > 0) {
+        return done(null, user.rows[0]);
+      }
+
+      // create new user
+      const newUser = await db.query(
+        "INSERT INTO users (email, google_id) VALUES ($1,$2) RETURNING *",
+        [profile.emails[0].value, profile.id]
+      );
+
+      return done(null, newUser.rows[0]);
+
+    } catch (err) {
+      return done(err, null);
+    }
+  }));
+
+/* ---------- SESSION SERIALIZATION ---------- */
+
+passport.serializeUser((user, cb) => {
+
+  cb(null, user.id);
+});
+
+passport.deserializeUser(async (id, cb) => {
+
+  try {
+
+    const result = await db.query(
+      "SELECT * FROM users WHERE id=$1",
+      [id]
+    );
+
+    cb(null, result.rows[0]);
+
+  } catch (err) {
+
+    cb(err);
+
+  }
+
+});
+
+
+app.listen(PORT, () => {
+  console.log(`ALIVE AND KICKING ON PORT ${PORT}`);
+});
+================================================================================

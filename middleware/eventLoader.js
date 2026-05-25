@@ -3,9 +3,12 @@ import db from "../db.js";
 async function eventFiller(req, res, next) {
   try {
     // Initialize both variables to empty arrays to prevent undefined errors
+    if (!req.isAuthenticated()) {
+      return res.redirect("/login");
+    }
     res.locals.events = [];
     res.locals.joinedEvents = [];
-    
+
     req.userID = req.user.id;
     if (req.isAuthenticated()) {
 
@@ -47,4 +50,4 @@ async function joinedEventFiller(req, res, next) {
   }
 }
 
-export {eventFiller, joinedEventFiller}; 
+export { eventFiller, joinedEventFiller }; 
