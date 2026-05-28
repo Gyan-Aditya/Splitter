@@ -52,4 +52,54 @@ async function handleJoinEvent(req, res) {
   res.redirect("/dashboard");
 }
 
-export {handleCreateEvent, handleJoinEvent};
+const handleViewEvent = async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.redirect("/login");
+  }
+
+  // -----------------------------------
+  const eventID = Number(req.params.id);
+  req.eventID = eventID;
+
+  if (!Number.isInteger(eventID)) {
+    return res.status(400).send("Invalid event id");
+  }
+
+  try {
+    const eventResult = await db.query(
+      "SELECT * FROM events WHERE id=$1",
+      [eventID]
+    );
+
+    if (!eventResult.rows.length) {
+      return res.status(404).send("Event not found");
+    }
+
+    const membersResult = await db.query(
+      `SELECT users.id, users.email
+       FROM event_members
+       JOIN users ON users.id = event_members.user_id
+       WHERE event_members.event_id = $1`,
+      [eventID]
+    );
+    // ---------------------------------
+    const expensesResult = await db.query(
+      `SELECT id, description, amount
+       FROM expenses
+       WHERE event_id = $1
+       ORDER BY created_at DESC`,
+      [eventID]
+    );
+
+    res.render("event", {
+      event: eventResult.rows[0],
+      members: membersResult.rows,
+      expenses: expensesResult.rows
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error loading event");
+  }
+}
+
+export {handleCreateEvent, handleJoinEvent, handleViewEvent};

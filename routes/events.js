@@ -1,5 +1,5 @@
 import express from "express";
-import { handleCreateEvent, handleJoinEvent } from "../controller/eventController.js";
+import { handleCreateEvent, handleJoinEvent, handleViewEvent } from "../controller/eventController.js";
 import { eventFiller } from "../middleware/eventLoader.js";
 
 const router = express.Router();
@@ -13,6 +13,8 @@ router.post("/create", handleCreateEvent);
 router.get("/join", eventFiller, (req, res) => {
   res.render("join-event");
 });
+
+router.get("/:id", eventFiller, handleViewEvent);
 
 router.post("/join", handleJoinEvent);
 

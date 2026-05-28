@@ -1,4 +1,4 @@
-import db from "../db";
+import db from "../db.js";
 // db.connect();
 
 async function createEventMembersTable() {
@@ -10,4 +10,4 @@ async function createEventMembersTable() {
  )`);
 }
 
-export default event_members;
+export default createEventMembersTable;

@@ -11,6 +11,8 @@ import eventsRouter from "./routes/events.js";
 import staticRouter from "./routes/basePath.js";
 import { eventFiller } from "./middleware/eventLoader.js";
 import GoogleStrategy from "passport-google-oauth2";
+import expenses from "./model/expense.js";
+import expensesRouter from "./routes/expenses.js";
 
 
 dotenv.config();
@@ -57,9 +59,6 @@ app.use((req, res, next) => {
 });
 
 
-/* ---------- EVENT LOADER MIDDLEWARE ---------- */
-
-
 
 
 /* ---------- ROUTES ---------- */
@@ -84,64 +83,9 @@ app.get("/auth/google/callback",
   })
 );
 
-
-/* ---------- REGISTER USER ---------- */
-
-
-
-/* ---------- DASHBOARD ---------- */
-
 app.use("/events", eventsRouter);
 
-// opening an event when event exists
-app.get("/events/:id", eventFiller, async (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.redirect("/login");
-  }
-
-  // -----------------------------------
-  const eventID = Number(req.params.id);
-
-  if (!Number.isInteger(eventID)) {
-    return res.status(400).send("Invalid event id");
-  }
-
-  try {
-    const eventResult = await db.query(
-      "SELECT * FROM events WHERE id=$1",
-      [eventID]
-    );
-
-    if (!eventResult.rows.length) {
-      return res.status(404).send("Event not found");
-    }
-
-    const membersResult = await db.query(
-      `SELECT users.id, users.email
-       FROM event_members
-       JOIN users ON users.id = event_members.user_id
-       WHERE event_members.event_id = $1`,
-      [eventID]
-    );
-    // ---------------------------------
-    const expensesResult = await db.query(
-      `SELECT id, description, amount
-       FROM expenses
-       WHERE event_id = $1
-       ORDER BY created_at DESC`,
-      [eventID]
-    );
-
-    res.render("event", {
-      event: eventResult.rows[0],
-      members: membersResult.rows,
-      expenses: expensesResult.rows
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Error loading event");
-  }
-});
+app.use("/expenses", expensesRouter);
 
 /* ---------- PASSPORT LOCAL STRATEGY ---------- */
 

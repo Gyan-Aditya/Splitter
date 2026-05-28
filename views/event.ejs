@@ -43,13 +43,27 @@
           </span>
 
           <form action="/expenses/delete/<%= exp.id %>" method="POST">
-            <button class="btn-danger">Delete</button>
+            <input type="hidden" name="eventID" value="<%= event.id %>">
+            <button type="submit" class="btn-danger">Delete</button>
           </form>
 
         </div>
 
         <% }) %>
 
+    </div>
+    <div class="add-expense">
+      <h3>Add Expense</h3>
+
+      <form action="/expenses/add/<%= event.id %>" method="POST">   
+
+        <input type="text" name="description" placeholder="Description" required>
+
+        <input type="number" name="amount" placeholder="Amount" required>
+
+        <button type="submit" class="btn-primary">Add</button>
+
+      </form>
     </div>
 
   </div>
