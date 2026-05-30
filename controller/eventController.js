@@ -2,33 +2,48 @@ import db from "../db.js";
 import createUniqueCode from "../utility/joincodes.js";
 
 async function handleCreateEvent(req, res) {
+
   if (!req.isAuthenticated()) {
     return res.redirect("/login");
   }
 
   const joinCode = await createUniqueCode();
 
-  const eventResult = await db.query(
-    "INSERT INTO events (name, join_code, created_by) VALUES ($1,$2,$3) RETURNING id",
+  await db.query(
+    "INSERT INTO events (name, join_code, created_by) VALUES ($1,$2,$3)",
     [req.body.name, joinCode, req.user.id]
   );
 
-  const eventID = eventResult.rows[0].id;
 
-  // add creator as member so they appear in member list and counts
-  await db.query(
-    "INSERT INTO event_members (event_id, user_id) VALUES ($1,$2)",
-    [eventID, req.user.id]
-  );
+
+  res.redirect("/dashboard");
+}
+
+async function handleDeleteEvent(req, res) {
+
+  if (!req.isAuthenticated()) {
+    return res.redirect("/login");
+  }
+  const eventID = req.params.id;
+
+  try {
+    await db.query(
+      "DELETE FROM events WHERE id=$1",
+      [eventID]
+    );
+  } catch (err) {
+    console.error("Error deleting event:", err);
+    return res.status(500).send("Error deleting event");
+  }
 
   res.redirect("/dashboard");
 }
 
 async function handleJoinEvent(req, res) {
+
   if (!req.isAuthenticated()) {
     return res.redirect("/login");
   }
-
   const joinCode = req.body.code;
 
   const eventResult = await db.query(
@@ -40,6 +55,7 @@ async function handleJoinEvent(req, res) {
     return res.status(404).send("Event not found");
   }
 
+  // Check if user is already a member
   const memberResult = await db.query(
     "SELECT * FROM event_members WHERE event_id=$1 AND user_id=$2",
     [eventResult.rows[0].id, req.user.id]
@@ -49,6 +65,7 @@ async function handleJoinEvent(req, res) {
     return res.status(400).send("You are already a member of this event");
   }
 
+  // Add user to event
   await db.query(
     "INSERT INTO event_members (event_id, user_id) VALUES ($1,$2)",
     [eventResult.rows[0].id, req.user.id]
@@ -94,7 +111,7 @@ const handleViewEvent = async (req, res) => {
       [eventID]
     );
 
-    // per member spending — key as integer
+    // per member spending
     const memberSpendingResult = await db.query(
       `SELECT paid_by, SUM(amount) AS total
        FROM expenses
@@ -105,10 +122,10 @@ const handleViewEvent = async (req, res) => {
 
     const spendingMap = {};
     memberSpendingResult.rows.forEach(row => {
-      spendingMap[parseInt(row.paid_by)] = parseFloat(row.total) || 0;
+      spendingMap[row.paid_by] = parseFloat(row.total) || 0;
     });
 
-    // settlements paid by current user to others — key as integer
+    // already settled payments FROM current user TO others in this event
     const settlementsResult = await db.query(
       `SELECT payee_id, SUM(amount) AS total
        FROM settlements
@@ -119,7 +136,7 @@ const handleViewEvent = async (req, res) => {
 
     const settledMap = {};
     settlementsResult.rows.forEach(row => {
-      settledMap[parseInt(row.payee_id)] = parseFloat(row.total) || 0;
+      settledMap[row.payee_id] = parseFloat(row.total) || 0;
     });
 
     const totalExpenses = expensesResult.rows
@@ -128,20 +145,17 @@ const handleViewEvent = async (req, res) => {
     const memberCount = membersResult.rows.length;
     const fairShare = memberCount > 0 ? totalExpenses / memberCount : 0;
 
-    const myPaid = spendingMap[parseInt(req.user.id)] || 0;
-    const myDebt = Math.max(0, fairShare - myPaid);
     const membersWithData = membersResult.rows.map(m => {
-      const memberID = parseInt(m.id);
-      const paid = spendingMap[memberID] || 0;
-
-      const balance = fairShare - paid;
-      const alreadySettled = settledMap[memberID] || 0;
+      const paid = spendingMap[m.id] || 0;
+      const balance = paid - fairShare;  // positive = others owe them, negative = they owe others
+      const alreadySettled = settledMap[m.id] || 0;
 
       let owedByMe = 0;
-      if (memberID !== parseInt(req.user.id) && balance > 0.01) {
-        // they overpaid — I owe them a portion
+      if (m.id !== req.user.id && balance > 0.01) {
+        // this member paid more than their share
+        // current user owes them their fair portion of that overpayment
+        const myDebt = fairShare - (spendingMap[req.user.id] || 0);
         owedByMe = Math.max(0, Math.min(myDebt, balance) - alreadySettled);
-
       }
 
       return {
@@ -168,4 +182,5 @@ const handleViewEvent = async (req, res) => {
   }
 };
 
-export { handleCreateEvent, handleJoinEvent, handleViewEvent };
+
+export { handleCreateEvent, handleJoinEvent, handleViewEvent, handleDeleteEvent };

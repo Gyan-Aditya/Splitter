@@ -1,5 +1,5 @@
 import express from "express";
-import { handleCreateEvent, handleJoinEvent, handleViewEvent } from "../controller/eventController.js";
+import { handleCreateEvent, handleJoinEvent, handleViewEvent, handleDeleteEvent } from "../controller/eventController.js";
 import { eventFiller, perHeadFiller } from "../middleware/eventLoader.js";
 
 const router = express.Router({ mergeParams: true });
@@ -20,6 +20,8 @@ router.get("/join", (req, res) => {
 });
 
 router.get("/:id", perHeadFiller, handleViewEvent);
+
+router.post("/delete/:id", handleDeleteEvent);
 
 router.post("/join", handleJoinEvent);
 
