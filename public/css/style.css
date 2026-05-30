@@ -157,7 +157,7 @@ a:hover {
 
 .hero {
   text-align: center;
-  padding: 80px 20px 60px;
+  /* padding */
 }
 
 .hero-badge {
@@ -776,4 +776,12 @@ input::placeholder {
 
 .balance-negative-text {
   color: var(--danger);
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
 }

@@ -14,6 +14,7 @@ import GoogleStrategy from "passport-google-oauth2";
 import expenses from "./model/expense.js";
 import expensesRouter from "./routes/expenses.js";
 import configPassport from "./config/passport.js";
+import paymentsRouter from "./routes/payments.js";
 
 dotenv.config();
 
@@ -22,7 +23,8 @@ const PORT = process.env.PORT || 3000;
 const saltRound = Number(process.env.SALT_ROUND);
 
 const app = express();
-
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 // db.connect();
 
 const PgSession = pgSession(session);
@@ -69,7 +71,7 @@ app.use("/", staticRouter);
 
 app.post("/login",
   passport.authenticate("local", {
-    successRedirect: "/dashboard",
+    successRedirect: "/",
     failureRedirect: "/login"
   })
 );
@@ -80,7 +82,7 @@ app.get("/auth/google",
 
 app.get("/auth/google/callback",
   passport.authenticate("google", {
-    successRedirect: "/dashboard",
+    successRedirect: "/",
     failureRedirect: "/login"
   })
 );
@@ -89,7 +91,7 @@ app.use("/events", eventsRouter);
 
 app.use("/expenses", expensesRouter);
 
-
+app.use("/payments", paymentsRouter);
 
 
 app.listen(PORT, '0.0.0.0', () => {

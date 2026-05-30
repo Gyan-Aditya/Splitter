@@ -16,16 +16,39 @@
       <h3>Members</h3>
       <ul class="member-list">
         <% members.forEach(member=> { %>
-          <li>
-            <div class="member-avatar">
-              <%= member.email[0].toUpperCase() %>
+          <li class="member-item">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="member-avatar">
+                <%= member.email[0].toUpperCase() %>
+              </div>
+              <div class="member-info">
+                <span class="member-email">
+                  <%= member.email %>
+                </span>
+                <span class="member-spent">₹<%= member.totalSpent.toFixed(2) %> paid</span>
+              </div>
             </div>
-            <div class="member-info">
-              <span class="member-email">
-                <%= member.email %>
-              </span>
-              <span class="member-spent">₹<%= member.totalSpent.toFixed(2) %> paid</span>
-            </div>
+
+            <% if (member.id !==currentUserID) { %>
+              <% if (member.owedByMe> 0.01) { %>
+                <!-- they paid more than fair share, you owe them -->
+                <button class="btn btn-primary pay-btn" style="font-size:12px; padding: 6px 12px;"
+                  data-payee-id="<%= member.id %>" data-payee-email="<%= member.email %>"
+                  data-amount="<%= member.owedByMe.toFixed(2) %>" data-event-id="<%= event.id %>">
+                  Pay ₹<%= member.owedByMe.toFixed(2) %>
+                </button>
+                <% } else if (member.balance < -0.01) { %>
+                  <!-- they paid less than fair share, they owe the group -->
+                  <button class="btn btn-secondary remind-btn" style="font-size:12px; padding: 6px 12px;"
+                    data-email="<%= member.email %>">
+                    Remind
+                  </button>
+                  <% } else { %>
+                    <span style="font-size:12px; color: var(--success);">✓ Settled</span>
+                    <% } %>
+                      <% } else { %>
+                        <span style="font-size:12px; color: var(--text-muted);">You</span>
+                        <% } %>
           </li>
           <% }) %>
       </ul>
@@ -67,39 +90,39 @@
                 <label>Amount (₹)</label>
                 <input type="number" name="amount" placeholder="0.00" min="0.01" step="0.01" required>
               </div>
-              <button type="submit" class="btn btn-primary" style="margin-bottom:0; align-self: flex-end;">Add</button>
+              <button type="submit" class="btn btn-primary" style="margin-bottom:0; align-self:flex-end;">Add</button>
             </form>
     </div>
 
-    <!-- Balance Panel -->
+    <!-- Split Summary -->
     <div class="panel">
       <h3>Split Summary</h3>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display:flex; flex-direction:column; gap:12px;">
 
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 14px; color: var(--text-muted);">Total expenses</span>
-          <span style="font-family: var(--font-mono); font-weight: 600;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:14px; color:var(--text-muted);">Total expenses</span>
+          <span style="font-family:var(--font-mono); font-weight:600;">
             ₹<%= expenses.reduce((sum, e)=> sum + Number(e.amount), 0).toFixed(2) %>
           </span>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 14px; color: var(--text-muted);">Members</span>
-          <span style="font-family: var(--font-mono); font-weight: 600;">
-            <%= members.length %>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:14px; color:var(--text-muted);">Fair share</span>
+          <span style="font-family:var(--font-mono); font-weight:600;">
+            ₹<%= fairShare.toFixed(2) %>
           </span>
         </div>
 
         <div
-          style="border-top: 1px solid var(--border); padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 14px; font-weight: 600;">Your balance</span>
+          style="border-top:1px solid var(--border); padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:14px; font-weight:600;">Your balance</span>
           <% const balanceClass=perHeadAmount>= 0 ? 'balance-positive-text' : 'balance-negative-text' %>
             <span class="balance-figure <%= balanceClass %>">
               <%= perHeadAmount>= 0 ? '+' : '' %>₹<%= Math.abs(perHeadAmount).toFixed(2) %>
             </span>
         </div>
 
-        <div style="font-size: 12px; color: var(--text-muted); text-align: right;">
+        <div style="font-size:12px; color:var(--text-muted); text-align:right;">
           <% if (perHeadAmount> 0.01) { %>
             Others owe you
             <% } else if (perHeadAmount < -0.01) { %>
@@ -113,5 +136,77 @@
     </div>
 
   </div>
+
+  <!-- Razorpay -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <script>
+    // Pay buttons
+    document.querySelectorAll('.pay-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const payeeID = btn.dataset.payeeId;
+        const payeeEmail = btn.dataset.payeeEmail;
+        const amount = btn.dataset.amount;
+        const eventID = btn.dataset.eventId;
+
+        // create order on backend
+        const res = await fetch('/payments/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, payeeID, eventID })
+        });
+
+        const order = await res.json();
+        if (!res.ok) {
+          alert('Failed to create payment order');
+          return;
+        }
+
+        // open Razorpay checkout
+        const rzp = new Razorpay({
+          key: order.keyId,
+          amount: order.amount,
+          currency: order.currency,
+          order_id: order.orderId,
+          name: 'Splitter',
+          description: `Settling up with ${payeeEmail}`,
+          theme: { color: '#f0a500' },
+          handler: async function (response) {
+            // verify on backend
+            const verify = await fetch('/payments/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              })
+            });
+
+            const result = await verify.json();
+            if (result.success) {
+              window.location.reload();
+            } else {
+              alert('Payment verification failed');
+            }
+          }
+        });
+
+        rzp.open();
+      });
+    });
+
+    // Remind buttons — toast for now
+    document.querySelectorAll('.remind-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const email = btn.dataset.email;
+        btn.textContent = 'Reminded!';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        // TODO: connect to email service
+        console.log(`Reminder queued for ${email}`);
+      });
+    });
+  </script>
 
   <%- include("partials/footer") %>

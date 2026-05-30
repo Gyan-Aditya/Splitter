@@ -5,8 +5,8 @@ PROJECT EXPORT FOR LLMs
 PROJECT INFORMATION:
 --------------------------------------------------
 Project Name: Splitter
-Generated On: 2026-05-30 13:26:05 (Asia/Calcutta / GMT+06:30)
-Total Files Processed: 30
+Generated On: 2026-05-30 17:58:54 (Asia/Calcutta / GMT+06:30)
+Total Files Processed: 32
 Export Tool: Easy Whole Project to Single Text File for LLMs v1.1.0
 Tool Author: Jota / José Guilherme Pandolfi
 
@@ -26,8 +26,9 @@ PROJECT STRUCTURE
 │   └── 📄 passport.js (2.61 KB)
 ├── 📁 controller/
 │   ├── 📄 authController.js (759 B)
-│   ├── 📄 eventController.js (3.11 KB)
-│   └── 📄 expenseController.js (1.36 KB)
+│   ├── 📄 eventController.js (4.4 KB)
+│   ├── 📄 expenseController.js (1.36 KB)
+│   └── 📄 paymentController.js (2.4 KB)
 ├── 📁 middleware/
 │   └── 📄 eventLoader.js (5.05 KB)
 ├── 📁 model/
@@ -37,12 +38,13 @@ PROJECT STRUCTURE
 │   └── 📄 users.js (314 B)
 ├── 📁 public/
 │   ├── 📁 css/
-│   │   └── 📄 style.css (13.69 KB)
+│   │   └── 📄 style.css (13.81 KB)
 │   └── 📁 images/
 ├── 📁 routes/
 │   ├── 📄 basePath.js (1.17 KB)
 │   ├── 📄 events.js (592 B)
-│   └── 📄 expenses.js (309 B)
+│   ├── 📄 expenses.js (309 B)
+│   └── 📄 payments.js (284 B)
 ├── 📁 utility/
 │   └── 📄 joincodes.js (612 B)
 ├── 📁 views/
@@ -51,7 +53,7 @@ PROJECT STRUCTURE
 │   │   └── 📄 header.ejs (750 B)
 │   ├── 📄 create-event.ejs (645 B)
 │   ├── 📄 dashboard.ejs (6.31 KB)
-│   ├── 📄 event.ejs (4.27 KB)
+│   ├── 📄 event.ejs (7.93 KB)
 │   ├── 📄 home.ejs (701 B)
 │   ├── 📄 join-event.ejs (746 B)
 │   ├── 📄 layout.ejs (536 B)
@@ -59,23 +61,23 @@ PROJECT STRUCTURE
 │   └── 📄 register.ejs (950 B)
 ├── 📄 db.js (532 B)
 ├── 📄 dbOnline.txt (8.03 KB)
-├── 📄 package-lock.json (71.42 KB)
-├── 📄 package.json (1.17 KB)
+├── 📄 package-lock.json (71.79 KB)
+├── 📄 package.json (1.19 KB)
 ├── 📄 readme.md (1.09 KB)
-└── 📄 server.js (2.13 KB)
+└── 📄 server.js (2.27 KB)
 
 ================================================================================
 PROJECT STATISTICS
 ================================================================================
-Total Files: 30
+Total Files: 32
 Total Directories: 11
-Text Files: 20
+Text Files: 22
 Binary Files: 10
-Total Size: 131.91 KB
+Total Size: 140.19 KB
 
 FILE TYPES DISTRIBUTION:
 ------------------------------
-.js             : 15
+.js             : 17
 .ejs            : 10
 .json           : 2
 .css            : 1
@@ -266,15 +268,15 @@ FILE: controller/eventController.js
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 3.11 KB
+Size: 4.4 KB
 Extension: .js
 Language: javascript
 Location: controller/eventController.js
 Relative Path: controller
 Created: 2026-05-30 12:17:41 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 13:22:43 (Asia/Calcutta / GMT+06:30)
-MD5: fba045d2a085ffca5b5a957fc1c9984a
-SHA256: 0ec3f5d55530be302e79e1ba83068c0abe1e7fba0f34bc35acecb0fd6a8b6421
+Modified: 2026-05-30 17:55:41 (Asia/Calcutta / GMT+06:30)
+MD5: d5be93e7ddc57f8c31a15313554c10b9
+SHA256: ba2c56a8200e65fa8addff321d03031375cc089ef69d4bf09964dcc92e83f9aa
 Encoding: ASCII
 
 FILE CONTENT:
@@ -340,9 +342,7 @@ const handleViewEvent = async (req, res) => {
     return res.redirect("/login");
   }
 
-  // -----------------------------------
   const eventID = Number(req.params.id);
-  req.eventID = eventID;
 
   if (!Number.isInteger(eventID)) {
     return res.status(400).send("Invalid event id");
@@ -365,20 +365,21 @@ const handleViewEvent = async (req, res) => {
        WHERE event_members.event_id = $1`,
       [eventID]
     );
-    // ---------------------------------
+
     const expensesResult = await db.query(
-      `SELECT id, description, amount
+      `SELECT id, description, amount, paid_by
        FROM expenses
        WHERE event_id = $1
        ORDER BY created_at DESC`,
       [eventID]
     );
 
+    // per member spending
     const memberSpendingResult = await db.query(
       `SELECT paid_by, SUM(amount) AS total
-   FROM expenses
-   WHERE event_id = $1
-   GROUP BY paid_by`,
+       FROM expenses
+       WHERE event_id = $1
+       GROUP BY paid_by`,
       [eventID]
     );
 
@@ -386,23 +387,63 @@ const handleViewEvent = async (req, res) => {
     memberSpendingResult.rows.forEach(row => {
       spendingMap[row.paid_by] = parseFloat(row.total) || 0;
     });
-    const membersWithSpending = membersResult.rows.map(m => ({
-      ...m,
-      totalSpent: spendingMap[m.id] || 0
-    }));
+
+    // already settled payments FROM current user TO others in this event
+    const settlementsResult = await db.query(
+      `SELECT payee_id, SUM(amount) AS total
+       FROM settlements
+       WHERE event_id = $1 AND payer_id = $2 AND status = 'paid'
+       GROUP BY payee_id`,
+      [eventID, req.user.id]
+    );
+
+    const settledMap = {};
+    settlementsResult.rows.forEach(row => {
+      settledMap[row.payee_id] = parseFloat(row.total) || 0;
+    });
+
+    const totalExpenses = expensesResult.rows
+      .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+
+    const memberCount = membersResult.rows.length;
+    const fairShare = memberCount > 0 ? totalExpenses / memberCount : 0;
+
+    const membersWithData = membersResult.rows.map(m => {
+      const paid = spendingMap[m.id] || 0;
+      const balance = paid - fairShare;  // positive = others owe them, negative = they owe others
+      const alreadySettled = settledMap[m.id] || 0;
+
+      let owedByMe = 0;
+      if (m.id !== req.user.id && balance > 0.01) {
+        // this member paid more than their share
+        // current user owes them their fair portion of that overpayment
+        const myDebt = fairShare - (spendingMap[req.user.id] || 0);
+        owedByMe = Math.max(0, Math.min(myDebt, balance) - alreadySettled);
+      }
+
+      return {
+        ...m,
+        totalSpent: paid,
+        balance,
+        owedByMe,
+        alreadySettled
+      };
+    });
 
     res.render("event", {
       event: eventResult.rows[0],
-      members: membersWithSpending,   // changed
+      members: membersWithData,
       expenses: expensesResult.rows,
-      perHeadAmount: res.locals.perHeadAmount
+      perHeadAmount: res.locals.perHeadAmount,
+      currentUserID: req.user.id,
+      fairShare
     });
+
   } catch (err) {
-    console.log(err);
+    console.error(err);
     res.status(500).send("Error loading event");
   }
-}
-
+};
 
 
 export { handleCreateEvent, handleJoinEvent, handleViewEvent };
@@ -478,6 +519,112 @@ async function handleExpenseDeletion(req, res) {
 
 export { handleExpenseCreation, handleExpenseDeletion };
 
+================================================================================
+
+
+================================================================================
+FILE: controller/paymentController.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 2.4 KB
+Extension: .js
+Language: javascript
+Location: controller/paymentController.js
+Relative Path: controller
+Created: 2026-05-30 17:38:11 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 17:52:00 (Asia/Calcutta / GMT+06:30)
+MD5: 2ff5447b721bcc69addea3ee648cd357
+SHA256: 9e691af1f4d7bc62447be4ce9553452ff136fb75473ea709f1b289f00b6384e8
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import Razorpay from "razorpay";
+import crypto from "crypto";
+import db from "../db.js";
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+async function handleCreateOrder(req, res) {
+  try {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { amount, payeeID, eventID } = req.body;
+
+    if (!amount || !payeeID || !eventID) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    // amount in paise (Razorpay uses smallest currency unit)
+    const order = await razorpay.orders.create({
+      amount: Math.round(parseFloat(amount) * 100),
+      currency: "INR",
+      receipt: `evt_${eventID}_${Date.now()}`,
+    });
+
+    // store pending settlement
+    await db.query(
+      `INSERT INTO settlements 
+       (event_id, payer_id, payee_id, amount, razorpay_order_id, status)
+       VALUES ($1, $2, $3, $4, $5, 'pending')`,
+      [eventID, req.user.id, payeeID, amount, order.id]
+    );
+
+    res.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID,
+    });
+
+  } catch (err) {
+    console.error("Error creating order:", err);
+    res.status(500).json({ error: "Failed to create order" });
+  }
+}
+
+async function handleVerifyPayment(req, res) {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ error: "Invalid signature" });
+    }
+
+    // paid update kar dena hai seedhe table mein
+    const result = await db.query(
+      `UPDATE settlements 
+       SET status = 'paid', razorpay_payment_id = $1
+       WHERE razorpay_order_id = $2
+       RETURNING event_id`,
+      [razorpay_payment_id, razorpay_order_id]
+    );
+
+    const eventID = result.rows[0]?.event_id;
+
+    res.json({ success: true, eventID });
+
+  } catch (err) {
+    console.error("Error verifying payment:", err);
+    res.status(500).json({ error: "Failed to verify payment" });
+  }
+}
+
+export { handleCreateOrder, handleVerifyPayment };
 ================================================================================
 
 
@@ -836,15 +983,15 @@ FILE: public/css/style.css
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 13.69 KB
+Size: 13.81 KB
 Extension: .css
 Language: css
 Location: public/css/style.css
 Relative Path: public/css
 Created: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 13:26:04 (Asia/Calcutta / GMT+06:30)
-MD5: 3279b4cfd37178b84e6cfc94ccbf3aa3
-SHA256: bf5f5aa922c98d6fb1efbe6f9f88c3354967d89ac457603586c9da03ae1faf4b
+Modified: 2026-05-30 17:49:22 (Asia/Calcutta / GMT+06:30)
+MD5: 0681f6660dc4d8aa948632945d1743b0
+SHA256: e3760355bfb6f0f40e97d11af2f47b17b05ca7c58ecf6618b7354783d3884551
 Encoding: UTF-8
 
 FILE CONTENT:
@@ -1008,7 +1155,7 @@ a:hover {
 
 .hero {
   text-align: center;
-  padding: 80px 20px 60px;
+  /* padding */
 }
 
 .hero-badge {
@@ -1628,6 +1775,14 @@ input::placeholder {
 .balance-negative-text {
   color: var(--danger);
 }
+
+.member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 ================================================================================
 
 
@@ -1770,6 +1925,37 @@ const router = express.Router();
 router.post("/add/:eventID", handleExpenseCreation);
 
 router.post("/delete/:expenseID", handleExpenseDeletion);
+
+export default router;
+================================================================================
+
+
+================================================================================
+FILE: routes/payments.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 284 B
+Extension: .js
+Language: javascript
+Location: routes/payments.js
+Relative Path: routes
+Created: 2026-05-30 17:46:09 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 17:46:13 (Asia/Calcutta / GMT+06:30)
+MD5: addc6b8fb73ea911c8727226228e726a
+SHA256: bcf8d58ba22345f4a96a6c3943f192fc53b0b026561f6541a4cbe915b1b1f13b
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import express from "express";
+import { handleCreateOrder, handleVerifyPayment } from "../controller/paymentController.js";
+
+const router = express.Router();
+
+router.post("/create-order", handleCreateOrder);
+router.post("/verify", handleVerifyPayment);
 
 export default router;
 ================================================================================
@@ -2138,15 +2324,15 @@ FILE: package-lock.json
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 71.42 KB
+Size: 71.79 KB
 Extension: .json
 Language: json
 Location: package-lock.json
 Relative Path: root
 Created: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 13:16:52 (Asia/Calcutta / GMT+06:30)
-MD5: acaf939616d81f37c167ce0d662d9152
-SHA256: 8b8de17f0b5e59037a23e4ca14b5ec55d3085b30dc4e8fdeb30077d3cc3c7476
+Modified: 2026-05-30 17:37:37 (Asia/Calcutta / GMT+06:30)
+MD5: 3be056001ab6c70e124e6e422170de61
+SHA256: 0d0f02a21ecf989d45a66e0522ba72cb7fdccd3aff03616e50a3400fac22e1a4
 Encoding: ASCII
 
 FILE CONTENT:
@@ -2176,6 +2362,7 @@ FILE CONTENT:
         "passport-google-oidc": "^0.1.0",
         "passport-local": "^1.0.0",
         "pg": "^8.20.0",
+        "razorpay": "^2.9.6",
         "session": "^0.1.0"
       },
       "devDependencies": {
@@ -3762,6 +3949,15 @@ FILE CONTENT:
         "node": ">= 0.10"
       }
     },
+    "node_modules/razorpay": {
+      "version": "2.9.6",
+      "resolved": "https://registry.npmjs.org/razorpay/-/razorpay-2.9.6.tgz",
+      "integrity": "sha512-zsHAQzd6e1Cc6BNoCNZQaf65ElL6O6yw0wulxmoG5VQDr363fZC90Mp1V5EktVzG45yPyNomNXWlf4cQ3622gQ==",
+      "license": "MIT",
+      "dependencies": {
+        "axios": "^1.6.8"
+      }
+    },
     "node_modules/readdirp": {
       "version": "3.6.0",
       "resolved": "https://registry.npmjs.org/readdirp/-/readdirp-3.6.0.tgz",
@@ -4153,15 +4349,15 @@ FILE: package.json
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 1.17 KB
+Size: 1.19 KB
 Extension: .json
 Language: json
 Location: package.json
 Relative Path: root
 Created: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 13:16:52 (Asia/Calcutta / GMT+06:30)
-MD5: 569447cc7e6b02e47ea161ca81107865
-SHA256: 78fe367a42ef9dd73b2d9c88d983095c68a82d922d2beed6400162899a4724eb
+Modified: 2026-05-30 17:37:37 (Asia/Calcutta / GMT+06:30)
+MD5: d6cf3e6037111af38a4015e4ab46ecc6
+SHA256: e50722ca79d6f7982202f5219b0f39ac0e456d7105ca4b4b4745bad6c3f6b2bb
 Encoding: ASCII
 
 FILE CONTENT:
@@ -4203,6 +4399,7 @@ FILE CONTENT:
     "passport-google-oidc": "^0.1.0",
     "passport-local": "^1.0.0",
     "pg": "^8.20.0",
+    "razorpay": "^2.9.6",
     "session": "^0.1.0"
   },
   "devDependencies": {
@@ -4266,15 +4463,15 @@ FILE: server.js
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 2.13 KB
+Size: 2.27 KB
 Extension: .js
 Language: javascript
 Location: server.js
 Relative Path: root
 Created: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-MD5: fa492d5c14505e95f027805e12feff9c
-SHA256: b92679c35de2409880303b8af8fb6972ce218439e895bc0374664bf7c467d974
+Modified: 2026-05-30 17:54:32 (Asia/Calcutta / GMT+06:30)
+MD5: b1436684cccbf990990d33a7811f8e41
+SHA256: ede33768eec4908da4d6909718f5f44190cc6ed8ba9f5559df7f2ebabdf9ab32
 Encoding: ASCII
 
 FILE CONTENT:
@@ -4295,6 +4492,7 @@ import GoogleStrategy from "passport-google-oauth2";
 import expenses from "./model/expense.js";
 import expensesRouter from "./routes/expenses.js";
 import configPassport from "./config/passport.js";
+import paymentsRouter from "./routes/payments.js";
 
 dotenv.config();
 
@@ -4303,7 +4501,8 @@ const PORT = process.env.PORT || 3000;
 const saltRound = Number(process.env.SALT_ROUND);
 
 const app = express();
-
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 // db.connect();
 
 const PgSession = pgSession(session);
@@ -4350,7 +4549,7 @@ app.use("/", staticRouter);
 
 app.post("/login",
   passport.authenticate("local", {
-    successRedirect: "/dashboard",
+    successRedirect: "/",
     failureRedirect: "/login"
   })
 );
@@ -4361,7 +4560,7 @@ app.get("/auth/google",
 
 app.get("/auth/google/callback",
   passport.authenticate("google", {
-    successRedirect: "/dashboard",
+    successRedirect: "/",
     failureRedirect: "/login"
   })
 );
@@ -4370,7 +4569,7 @@ app.use("/events", eventsRouter);
 
 app.use("/expenses", expensesRouter);
 
-
+app.use("/payments", paymentsRouter);
 
 
 app.listen(PORT, '0.0.0.0', () => {
