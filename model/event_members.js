@@ -1,5 +1,5 @@
-import db from "../db";
-db.connect();
+import db from "../db.js";
+// db.connect();
 
 async function createEventMembersTable() {
   const event_members = await db.query(`CREATE TABLE event_members (
@@ -10,4 +10,4 @@ async function createEventMembersTable() {
  )`);
 }
 
-export default event_members;
+export default createEventMembersTable;

@@ -1,31 +1,28 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
-  <title>SplitEvent</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Splitter</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 
 <body>
 
-  <nav class="navbar nav nav-tabs">
-
-    <div class="logo">SplitEvent</div>
-
-    <div class="nav-links ">
-      <a href="/">Home</a>
-      <% if(isAuth) { %>
+  <nav class="navbar">
+    <a href="/" class="nav-logo">Split<span>ter</span></a>
+    <div class="nav-links">
+      <% if (isAuth) { %>
         <a href="/dashboard">Dashboard</a>
-        <!-- <a href="/events/create">Create Event</a> -->
-        <!-- <a href="/events/join">Join Event</a> -->
+        <a href="/events/create">Create Event</a>
+        <a href="/events/join">Join Event</a>
         <a href="/logout">Logout</a>
-        <% } %>
-
+        <% } else { %>
+          <a href="/login">Login</a>
+          <a href="/register" class="nav-cta">Get Started</a>
+          <% } %>
     </div>
-
   </nav>
 
   <div class="container">

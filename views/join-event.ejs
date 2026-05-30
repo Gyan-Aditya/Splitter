@@ -1,17 +1,22 @@
 <%- include("partials/header") %>
 
-  <div class="card">
+  <div style="max-width: 440px; margin: 0 auto;">
+    <div class="auth-card">
 
-    <h2>Join Event</h2>
+      <h2>Join Event</h2>
+      <p class="subtitle">Enter the join code shared by your friend</p>
 
-    <form action="/events/join" method="POST">
+      <form action="/events/join" method="POST">
+        <div class="form-group">
+          <label for="code">Join Code</label>
+          <input type="text" id="code" name="code" placeholder="e.g. AB3X7K"
+            style="font-family: var(--font-mono); letter-spacing: 0.15em; text-transform: uppercase;" maxlength="6"
+            required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Join Event</button>
+      </form>
 
-      <input type="text" name="code" placeholder="Enter Join Code" required>
-
-      <button class="btn-primary">Join</button>
-
-    </form>
-
+    </div>
   </div>
 
   <%- include("partials/footer") %>

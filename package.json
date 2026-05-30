@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "nodemon server.js",
+    "dev": "nodemon -e js,ejs,json server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -19,6 +21,7 @@
   },
   "homepage": "https://github.com/TLxGHOST/Splitter#readme",
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "axios": "^1.13.6",
     "bcrypt": "^6.0.0",
     "connect-pg-simple": "^10.0.0",
@@ -26,9 +29,15 @@
     "ejs": "^5.0.1",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
+    "http": "^0.0.1-security",
     "passport": "^0.7.0",
+    "passport-google-oauth2": "^0.2.0",
+    "passport-google-oidc": "^0.1.0",
     "passport-local": "^1.0.0",
     "pg": "^8.20.0",
     "session": "^0.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

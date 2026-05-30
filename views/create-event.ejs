@@ -1,19 +1,20 @@
 <%- include("partials/header") %>
 
-  <h1>Create Event</h1>
+  <div style="max-width: 440px; margin: 0 auto;">
+    <div class="auth-card">
 
-  <div class="card">
+      <h2>Create Event</h2>
+      <p class="subtitle">Give your event a name and share the code with your crew</p>
 
-    <form action="/events/create" method="POST">
+      <form action="/events/create" method="POST">
+        <div class="form-group">
+          <label for="name">Event Name</label>
+          <input type="text" id="name" name="name" placeholder="e.g. Goa Trip 2026" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Create Event</button>
+      </form>
 
-      <label>Event Name</label>
-
-      <input type="text" name="name" placeholder="Trip to Goa" required>
-
-      <button class="btn-primary">Create Event</button>
-
-    </form>
-
+    </div>
   </div>
 
   <%- include("partials/footer") %>

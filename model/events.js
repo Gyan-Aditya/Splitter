@@ -1,5 +1,5 @@
-import db from "../db";
-db.connect();
+import db from "../db.js";
+// db.connect();
 
 async function createEventsTable() {
   const events = await db.query(`CREATE TABLE events (

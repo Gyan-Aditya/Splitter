@@ -1,55 +1,76 @@
 <%- include("partials/header") %>
 
-  <h1>
-    <%= event.name %>
-  </h1>
-
-  <p class="join-code">
-    Join Code: <strong>
+  <div class="event-header">
+    <h1>
+      <%= event.name %>
+    </h1>
+    <span class="join-code-pill">
       <%= event.join_code %>
-    </strong>
-  </p>
+    </span>
+  </div>
 
   <div class="event-layout">
 
-    <div class="members">
-
+    <!-- Left: Members -->
+    <div class="panel">
       <h3>Members</h3>
-
-      <ul>
-
+      <ul class="member-list">
         <% members.forEach(member=> { %>
-
           <li>
+            <div class="member-avatar">
+              <%= member.email[0].toUpperCase() %>
+            </div>
             <%= member.email %>
           </li>
-
           <% }) %>
-
       </ul>
-
     </div>
 
-    <div class="expenses">
-
+    <!-- Right: Expenses -->
+    <div class="panel">
       <h3>Expenses</h3>
 
-      <% expenses.forEach(exp=> { %>
+      <% if (expenses.length===0) { %>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+          No expenses yet. Add the first one below.
+        </p>
+        <% } else { %>
+          <div class="expense-list">
+            <% expenses.forEach(exp=> { %>
+              <div class="expense-card">
+                <div class="expense-info">
+                  <span class="expense-desc">
+                    <%= exp.description %>
+                  </span>
+                  <span class="expense-amount">₹<%= Number(exp.amount).toFixed(2) %></span>
+                </div>
+                <form action="/expenses/delete/<%= exp.id %>" method="POST">
+                  <input type="hidden" name="eventID" value="<%= event.id %>">
+                  <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+              </div>
+              <% }) %>
+          </div>
+          <% } %>
 
-        <div class="expense-card">
+            <!-- Add Expense -->
+            <form action="/expenses/add/<%= event.id %>" method="POST" class="add-expense-form">
+              <div class="form-group">
+                <label>Description</label>
+                <input type="text" name="description" placeholder="e.g. Dinner" required>
+              </div>
+              <div class="form-group">
+                <label>Amount (₹)</label>
+                <input type="number" name="amount" placeholder="0.00" min="0.01" step="0.01" required>
+              </div>
+              <button type="submit" class="btn btn-primary" style="margin-bottom:0; align-self: flex-end;">Add</button>
+            </form>
 
-          <span>
-            <%= exp.description %> - ₹<%= exp.amount %>
-          </span>
-
-          <form action="/expenses/delete/<%= exp.id %>" method="POST">
-            <button class="btn-danger">Delete</button>
-          </form>
-
-        </div>
-
-        <% }) %>
-
+    </div>
+    <div class="panel">
+      <span class="join-code-pil">
+        <strong><b>Your balance: ₹<%= perHeadAmount.toFixed(2) %></b></strong>
+      </span>
     </div>
 
   </div>

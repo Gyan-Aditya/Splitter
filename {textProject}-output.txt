@@ -1,3 +1,1800 @@
+====================================================================================================
+PROJECT EXPORT FOR LLMs
+====================================================================================================
+
+PROJECT INFORMATION:
+--------------------------------------------------
+Project Name: Splitter
+Generated On: 2026-05-30 06:16:32 (Asia/Calcutta / GMT+06:30)
+Total Files Processed: 30
+Export Tool: Easy Whole Project to Single Text File for LLMs v1.1.0
+Tool Author: Jota / José Guilherme Pandolfi
+
+EXPORT CONFIGURATION:
+--------------------------------------------------
+Language: en
+Max File Size: 1 MB
+Include Hidden Files: false
+Output Format: txt
+Notification Level: silent
+Custom File Name Pattern: {textProject}-output
+
+================================================================================
+PROJECT STRUCTURE
+================================================================================
+├── 📁 config/
+│   └── 📄 passport.js (2.61 KB)
+├── 📁 controller/
+│   ├── 📄 authController.js (759 B)
+│   ├── 📄 eventController.js (2.59 KB)
+│   └── 📄 expenseController.js (1.36 KB)
+├── 📁 middleware/
+│   └── 📄 eventLoader.js (1.16 KB)
+├── 📁 model/
+│   ├── 📄 event_members.js (384 B)
+│   ├── 📄 events.js (369 B)
+│   ├── 📄 expense.js (417 B)
+│   └── 📄 users.js (314 B)
+├── 📁 public/
+│   ├── 📁 css/
+│   │   └── 📄 style.css (10.7 KB)
+│   └── 📁 images/
+├── 📁 routes/
+│   ├── 📄 basePath.js (1.04 KB)
+│   ├── 📄 events.js (575 B)
+│   └── 📄 expenses.js (309 B)
+├── 📁 utility/
+│   └── 📄 joincodes.js (612 B)
+├── 📁 views/
+│   ├── 📁 partials/
+│   │   ├── 📄 footer.ejs (115 B)
+│   │   └── 📄 header.ejs (755 B)
+│   ├── 📄 create-event.ejs (645 B)
+│   ├── 📄 dashboard.ejs (1.79 KB)
+│   ├── 📄 event.ejs (2.35 KB)
+│   ├── 📄 home.ejs (701 B)
+│   ├── 📄 join-event.ejs (746 B)
+│   ├── 📄 layout.ejs (536 B)
+│   ├── 📄 login.ejs (1.97 KB)
+│   └── 📄 register.ejs (950 B)
+├── 📄 db.js (532 B)
+├── 📄 dbOnline.txt (8.03 KB)
+├── 📄 package-lock.json (70.43 KB)
+├── 📄 package.json (1.1 KB)
+├── 📄 readme.md (1.09 KB)
+└── 📄 server.js (2.13 KB)
+
+================================================================================
+PROJECT STATISTICS
+================================================================================
+Total Files: 30
+Total Directories: 11
+Text Files: 20
+Binary Files: 10
+Total Size: 116.87 KB
+
+FILE TYPES DISTRIBUTION:
+------------------------------
+.js             : 15
+.ejs            : 10
+.json           : 2
+.css            : 1
+.txt            : 1
+.md             : 1
+
+================================================================================
+FILE CODE CONTENTS
+================================================================================
+
+
+================================================================================
+FILE: config/passport.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 2.61 KB
+Extension: .js
+Language: javascript
+Location: config/passport.js
+Relative Path: config
+Created: 2026-03-19 15:13:24 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 06:03:45 (Asia/Calcutta / GMT+06:30)
+MD5: 3f7a6bb86231201fc1c4a2687fd05a50
+SHA256: 200a300bdbab8ebd250943c5b2bfd7b36224d32b793e5f02af93ecafeb32def6
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import GoogleStrategy from "passport-google-oauth2";
+import bcrypt from "bcrypt";
+import db from "../db.js";
+
+export default function passportConfigurations() {
+
+  // local strategy
+  passport.use("local", new LocalStrategy(async (username, password, cb) => {
+    try {
+      const result = await db.query("SELECT * FROM users WHERE email=$1", [username]);
+      //get alll data with username or email matched 
+
+      if (!result.rows.length) {
+        return cb(null, false);
+      }//if no data with same user name return a call back with null errors and false authentication
+      const userData = result.rows[0];
+
+      const validLogin = await bcrypt.compare(password, userData.password);
+      // if user exists compare password hash using bcrypt 
+
+
+      if (validLogin) {
+        return cb(null, userData);
+      }
+      //if hash matchess return null error and userdata so that it remains true which converts to returning not false eitherwise
+
+      return cb(null, false);
+      // if hsh do not match just reutn no error ie null and a false authentication
+
+    }
+    catch (err) {
+      return cb(err, false);
+      // if anything fails while retrieving data or authentication catch error and return error and false authentication .
+    }
+  }));
+
+  // // google strategy
+
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "/auth/google/callback"
+  },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const user = await db.query("SELECT * FROM users WHERE google_id=$1", [profile.id]);
+
+        if (user.rows.length > 0) {
+
+          // console.log(profile)
+          // console.log(profile.emails)
+          // console.log(profile.emails[0])
+          // console.log(profile.emails[0].value + " " + profile.id);
+          return done(null, user.rows[0]);
+        }
+
+        const newUser = await db.query("INSERT INTO users (email, google_id) VALUES ($1,$2) RETURNING *", [profile.emails[0].value, profile.id]);
+
+        return done(null, newUser.rows[0]);
+      }
+      catch (err) {
+        return done(err, null);
+      }
+    }
+  ));
+
+
+
+  /// serialization
+
+  passport.serializeUser((user, cb) => {
+    cb(null, user.id);
+  })
+
+  passport.deserializeUser(async (id, cb) => {
+    try {
+      const result = await db.query("SELECT * FROM users WHERE id=$1", [id]);
+
+      cb(null, result.rows[0]);
+    }
+    catch (err) {
+      cb(err);
+    }
+  });
+
+
+}
+================================================================================
+
+
+================================================================================
+FILE: controller/authController.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 759 B
+Extension: .js
+Language: javascript
+Location: controller/authController.js
+Relative Path: controller
+Created: 2026-03-19 15:14:11 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-25 07:32:24 (Asia/Calcutta / GMT+06:30)
+MD5: 90974a787d268f1a857710c4135a6b0a
+SHA256: 2fe4a389503b78a0034151e3f08f37eb15c8b0245d8b6794598463c1b4472dc2
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+import bcrypt from "bcrypt";
+
+const saltRound = Number(process.env.SALT_ROUND);
+
+async function handleRegister(req, res) {
+
+  try {
+
+    const username = req.body.username;
+    const password = req.body.password;
+
+    const dbResult = await db.query(
+      "SELECT * FROM users WHERE email=$1",
+      [username]
+    );
+
+    if (dbResult.rows.length === 0) {
+
+      const hashedPass = await bcrypt.hash(password, saltRound);
+
+      await db.query(
+        "INSERT INTO users(email,password) VALUES($1,$2)",
+        [username, hashedPass]
+      );
+
+    }
+
+    res.redirect("/login");
+
+  } catch (err) {
+
+    console.log(err);
+    res.send("Registration error");
+
+  }
+
+}
+
+export {handleRegister};
+================================================================================
+
+
+================================================================================
+FILE: controller/eventController.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 2.59 KB
+Extension: .js
+Language: javascript
+Location: controller/eventController.js
+Relative Path: controller
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+MD5: 690fa44b897bdcd46028cd33e9669b1a
+SHA256: f0847067f195bc4b9fed7ef72441aa7f4feb31a8ce4977af09f36d3011984723
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+import createUniqueCode from "../utility/joincodes.js";
+
+async function handleCreateEvent(req, res){
+
+  if (!req.isAuthenticated()) {
+    return res.redirect("/login");
+  }
+
+  const joinCode = await createUniqueCode();
+
+  await db.query(
+    "INSERT INTO events (name, join_code, created_by) VALUES ($1,$2,$3)",
+    [req.body.name, joinCode, req.user.id]
+  );
+
+  res.redirect("/dashboard");
+}
+
+async function handleJoinEvent(req, res) {
+
+  if (!req.isAuthenticated()) {
+    return res.redirect("/login");
+  }
+  const joinCode = req.body.code;
+
+  const eventResult = await db.query(
+    "SELECT * FROM events WHERE join_code=$1",
+    [joinCode]
+  );
+
+  if (!eventResult.rows.length) {
+    return res.status(404).send("Event not found");
+  }
+
+  // Check if user is already a member
+  const memberResult = await db.query(
+    "SELECT * FROM event_members WHERE event_id=$1 AND user_id=$2",
+    [eventResult.rows[0].id, req.user.id]
+  );
+
+  if (memberResult.rows.length) {
+    return res.status(400).send("You are already a member of this event");
+  }
+
+  // Add user to event
+  await db.query(
+    "INSERT INTO event_members (event_id, user_id) VALUES ($1,$2)",
+    [eventResult.rows[0].id, req.user.id]
+  );
+
+  res.redirect("/dashboard");
+}
+
+const handleViewEvent = async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.redirect("/login");
+  }
+
+  // -----------------------------------
+  const eventID = Number(req.params.id);
+  req.eventID = eventID;
+
+  if (!Number.isInteger(eventID)) {
+    return res.status(400).send("Invalid event id");
+  }
+
+  try {
+    const eventResult = await db.query(
+      "SELECT * FROM events WHERE id=$1",
+      [eventID]
+    );
+
+    if (!eventResult.rows.length) {
+      return res.status(404).send("Event not found");
+    }
+
+    const membersResult = await db.query(
+      `SELECT users.id, users.email
+       FROM event_members
+       JOIN users ON users.id = event_members.user_id
+       WHERE event_members.event_id = $1`,
+      [eventID]
+    );
+    // ---------------------------------
+    const expensesResult = await db.query(
+      `SELECT id, description, amount
+       FROM expenses
+       WHERE event_id = $1
+       ORDER BY created_at DESC`,
+      [eventID]
+    );
+
+    res.render("event", {
+      event: eventResult.rows[0],
+      members: membersResult.rows,
+      expenses: expensesResult.rows
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error loading event");
+  }
+}
+
+export {handleCreateEvent, handleJoinEvent, handleViewEvent};
+================================================================================
+
+
+================================================================================
+FILE: controller/expenseController.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 1.36 KB
+Extension: .js
+Language: javascript
+Location: controller/expenseController.js
+Relative Path: controller
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+MD5: ea741e609d06bededb5cd5965fac5f16
+SHA256: 2eedecca8cbd310c3b7239b1cb75bbeb213f65584ef6446c27cba3764ed3ba17
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";  
+
+async function handleExpenseCreation(req, res) {
+  try {
+    if (!req.isAuthenticated()) {
+      return res.redirect("/login");
+    }
+    const description = req.body.description;
+    const amount = req.body.amount;
+    const user_id = req.user.id;
+    const eventId = req.params.eventID;
+    if (!eventId || !description || !amount) {
+      return res.status(400).send("All fields are required");
+    }
+    await db.query(
+      "INSERT INTO expenses (event_id, description, amount, paid_by) VALUES ($1, $2, $3, $4)",
+      [eventId, description, amount, user_id]
+    );
+    res.redirect(`/events/${eventId}`);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error creating expense");
+  }
+}
+
+async function handleExpenseDeletion(req, res) {
+  try {
+    if (!req.isAuthenticated()) {
+        return res.redirect("/login");
+    }
+    const expenseID = req.params.expenseID;
+    const eventID = req.body.eventID;
+    if (!expenseID) {
+        return res.status(400).send("Expense ID is required");
+    }
+    await db.query(
+        "DELETE FROM expenses WHERE id = $1",
+        [expenseID]
+    );
+    res.redirect(`/events/${eventID}`);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error deleting expense");
+  }
+};
+
+
+
+export { handleExpenseCreation, handleExpenseDeletion };
+
+================================================================================
+
+
+================================================================================
+FILE: middleware/eventLoader.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 1.16 KB
+Extension: .js
+Language: javascript
+Location: middleware/eventLoader.js
+Relative Path: middleware
+Created: 2026-04-21 01:57:23 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-25 07:50:26 (Asia/Calcutta / GMT+06:30)
+MD5: 531d011b5c5cca99e4c706927e0e0cc6
+SHA256: f98f9515a32a2d9756c39f34e2e393ebad8868c0be63cc8765b3756df0fc26c9
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+
+async function eventFiller(req, res, next) {
+  try {
+    // Initialize both variables to empty arrays to prevent undefined errors
+    if (!req.isAuthenticated()) {
+      return res.redirect("/login");
+    }
+    res.locals.events = [];
+    res.locals.joinedEvents = [];
+
+    req.userID = req.user.id;
+    if (req.isAuthenticated()) {
+
+      const eventData = await db.query(
+        "SELECT * FROM events WHERE created_by=$1",
+        [req.user.id]
+      );
+
+      res.locals.events = eventData.rows || [];
+
+    }
+
+    next();
+
+  } catch (err) {
+    console.log(err);
+    next();
+  }
+}
+
+async function joinedEventFiller(req, res, next) {
+  try {
+    req.userID = req.user.id;
+    if (req.isAuthenticated()) {
+      const eventData = await db.query(
+        `SELECT events.*
+         FROM events
+          JOIN event_members ON events.id = event_members.event_id
+          WHERE event_members.user_id = $1`,
+        [req.user.id]
+      );
+
+      res.locals.joinedEvents = eventData.rows || [];
+    }
+    next();
+  } catch (err) {
+    console.log(err);
+    next();
+  }
+}
+
+export { eventFiller, joinedEventFiller }; 
+================================================================================
+
+
+================================================================================
+FILE: model/event_members.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 384 B
+Extension: .js
+Language: javascript
+Location: model/event_members.js
+Relative Path: model
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+MD5: 10d484de4c76369d609ac87d44659151
+SHA256: 4ebfdb7ecd7a7a49fe6cfd5d57f031b27723ea8427ae34fa85b757882b67fdbd
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+// db.connect();
+
+async function createEventMembersTable() {
+  const event_members = await db.query(`CREATE TABLE event_members (
+     id SERIAL PRIMARY KEY,
+     event_id INTEGER REFERENCES events(id),
+     user_id INTEGER REFERENCES users(id),
+     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ )`);
+}
+
+export default createEventMembersTable;
+================================================================================
+
+
+================================================================================
+FILE: model/events.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 369 B
+Extension: .js
+Language: javascript
+Location: model/events.js
+Relative Path: model
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+MD5: 438f5171004a9d8c063c95cbe8b15224
+SHA256: cb446070cbeeb7ba0bfa2f9eb9c67060e07909a2965d82a27517f8c6d67a49c2
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+// db.connect();
+
+async function createEventsTable() {
+  const events = await db.query(`CREATE TABLE events (
+     id SERIAL PRIMARY KEY,
+     name TEXT NOT NULL,
+     join_code TEXT UNIQUE NOT NULL,
+     created_by INTEGER REFERENCES users(id),
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ )`);
+}
+
+export default events;
+================================================================================
+
+
+================================================================================
+FILE: model/expense.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 417 B
+Extension: .js
+Language: javascript
+Location: model/expense.js
+Relative Path: model
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+MD5: 5f0a88c5f7bc3f6c67addf060688ad40
+SHA256: 822565bd69aa6a98573aa4e77f7a100ca12f416ff9fb5620f01d824b8a669503
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+// db.connect();
+
+async function createExpensesTable() {
+    const expenses = await db.query(`CREATE TABLE expenses (
+    id SERIAL PRIMARY KEY,
+    event_id INTEGER REFERENCES events(id),
+    user_id INTEGER REFERENCES users(id),
+    amount NUMERIC NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`);
+}
+
+export default createExpensesTable;
+================================================================================
+
+
+================================================================================
+FILE: model/users.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 314 B
+Extension: .js
+Language: javascript
+Location: model/users.js
+Relative Path: model
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+MD5: 41f177f065bdb7953e7429938bffb361
+SHA256: 3a7f14ec08269131959dbf36ef200cda3ac1236e36ae2a868a3714bf0512bd1d
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+// db.connect();
+
+async function createUsersTable() {
+	const users = await db.query(`CREATE TABLE users(
+ 	id SERIAL PRIMARY KEY,
+ 	email TEXT UNIQUE NOT NULL,
+ 	password TEXT,
+ 	google_id TEXT,
+ 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ )`);
+}
+
+export default users;
+================================================================================
+
+
+================================================================================
+FILE: public/css/style.css
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 10.7 KB
+Extension: .css
+Language: css
+Location: public/css/style.css
+Relative Path: public/css
+Created: 2026-03-19 00:16:20 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 06:14:42 (Asia/Calcutta / GMT+06:30)
+MD5: 33657ee09dd4abf6ac961310509f22ee
+SHA256: 8fd010280e1a07dd868e89c8ab3a2643afa4cd15afc547ccc8fa14582ca8c7df
+Encoding: UTF-8
+
+FILE CONTENT:
+----------------------------------------
+/* ============================================
+   SPLITTER — Style System
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --bg:         #0d1117;
+  --bg-card:    #161b22;
+  --bg-input:   #0d1117;
+  --border:     #30363d;
+  --border-focus: #f0a500;
+
+  --text:       #e6edf3;
+  --text-muted: #7d8590;
+  --text-dim:   #484f58;
+
+  --accent:     #f0a500;
+  --accent-dim: #f0a50022;
+  --accent-hover: #ffb700;
+
+  --danger:     #f85149;
+  --danger-dim: #f8514915;
+
+  --success:    #3fb950;
+
+  --radius:     10px;
+  --radius-lg:  16px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.3);
+
+  --font-body:    'DM Sans', sans-serif;
+  --font-display: 'Syne', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+}
+
+/* ---- Reset & Base ---- */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; transition: color 0.15s; }
+a:hover { color: var(--accent-hover); }
+
+/* ---- Nav ---- */
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  height: 60px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.nav-logo span {
+  color: var(--accent);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-links a {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.nav-links a:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.05);
+}
+
+.nav-links a.nav-cta {
+  color: var(--bg);
+  background: var(--accent);
+  font-weight: 600;
+}
+
+.nav-links a.nav-cta:hover {
+  background: var(--accent-hover);
+}
+
+/* ---- Layout ---- */
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 40px;
+  flex: 1;
+}
+
+.container-sm {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  flex: 1;
+}
+
+/* ---- Footer ---- */
+
+.footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 13px;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+}
+
+/* ---- Hero ---- */
+
+.hero {
+  text-align: center;
+  padding: 80px 20px 60px;
+}
+
+.hero-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: 100px;
+  padding: 4px 14px;
+  margin-bottom: 24px;
+  letter-spacing: 0.05em;
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.hero h1 span {
+  color: var(--accent);
+}
+
+.hero p {
+  font-size: 18px;
+  color: var(--text-muted);
+  max-width: 480px;
+  margin: 0 auto 36px;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ---- Buttons ---- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #0d1117;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  color: #0d1117;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(240,165,0,0.3);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+  background: rgba(255,255,255,0.04);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid transparent;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.btn-danger:hover {
+  background: var(--danger-dim);
+  border-color: var(--danger);
+}
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+
+.btn-google:hover {
+  border-color: var(--text-muted);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+}
+
+.btn-full { width: 100%; justify-content: center; }
+
+/* ---- Auth Card ---- */
+
+.auth-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  box-shadow: var(--shadow);
+}
+
+.auth-card h2 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+
+.auth-card .subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 28px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-footer {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 20px;
+}
+
+/* ---- Form Elements ---- */
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"] {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+input::placeholder { color: var(--text-dim); }
+
+/* ---- Dashboard ---- */
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-header h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.page-header .actions {
+  display: flex;
+  gap: 8px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.event-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  transition: border-color 0.15s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.event-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.join-code-pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 3px 10px;
+  letter-spacing: 0.1em;
+}
+
+.event-card .open-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: auto;
+}
+
+.empty-state {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 40px;
+}
+
+/* ---- Event Page ---- */
+
+.event-header {
+  margin-bottom: 32px;
+}
+
+.event-header h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 10px;
+}
+
+.event-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.panel h3 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.member-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.member-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.member-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.expense-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  gap: 12px;
+}
+
+.expense-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.expense-desc {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.expense-amount {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.add-expense-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.add-expense-form .form-group {
+  flex: 1;
+  min-width: 140px;
+  margin-bottom: 0;
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 768px) {
+  .navbar { padding: 0 20px; }
+  .container { padding: 32px 20px; }
+  .event-layout { grid-template-columns: 1fr; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+}
+
+================================================================================
+
+
+================================================================================
+FILE: routes/basePath.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 1.04 KB
+Extension: .js
+Language: javascript
+Location: routes/basePath.js
+Relative Path: routes
+Created: 2026-04-21 01:57:23 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 06:12:40 (Asia/Calcutta / GMT+06:30)
+MD5: a2e5c74f7bbde554daff7393b3e64ba8
+SHA256: 0c9679f0a3c12744a66a68749c4299549a8e9e171626d8a68d50c557b4384278
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import express from "express";
+import { eventFiller, joinedEventFiller } from "../middleware/eventLoader.js";
+import { handleRegister } from "../controller/authController.js";
+const router = express.Router();
+
+router.get("/", eventFiller, joinedEventFiller, (req, res) => {
+  if (req.session.view) {
+    req.session.view += 1;
+  }
+  else {
+    req.session.view = 1;
+  }
+  console.log(req.session.view);
+  res.render("home");
+});
+
+router.get("/login", (req, res) => {
+  res.render("login");
+});
+
+router.get("/register", (req, res) => {
+  res.render("register");
+});
+
+router.get("/logout", (req, res, next) => {
+  req.logout((err) => {
+    if (err) {
+      return next(err);
+    }
+    req.session.destroy((err) => {
+      if (err) {
+        return next(err);
+      }
+      res.clearCookie("connect.sid");
+      res.redirect("/");
+    });
+  });
+});
+
+router.get("/dashboard", eventFiller, joinedEventFiller, (req, res) => {
+  res.render("dashboard");
+});
+
+router.post("/register", handleRegister);
+
+
+export default router;
+================================================================================
+
+
+================================================================================
+FILE: routes/events.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 575 B
+Extension: .js
+Language: javascript
+Location: routes/events.js
+Relative Path: routes
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+MD5: 5f164ea283fdfb7fc881272f3aa6a2d4
+SHA256: 35f6dfd1ad2eb2eeb00a4ac4059a563158fcd28a8f590c2926eecd685cb5f13a
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import express from "express";
+import { handleCreateEvent, handleJoinEvent, handleViewEvent } from "../controller/eventController.js";
+import { eventFiller } from "../middleware/eventLoader.js";
+
+const router = express.Router();
+
+router.get("/create", eventFiller, (req, res) => {
+  res.render("create-event");
+});
+
+router.post("/create", handleCreateEvent);
+
+router.get("/join", eventFiller, (req, res) => {
+  res.render("join-event");
+});
+
+router.get("/:id", eventFiller, handleViewEvent);
+
+router.post("/join", handleJoinEvent);
+
+export default router;
+================================================================================
+
+
+================================================================================
+FILE: routes/expenses.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 309 B
+Extension: .js
+Language: javascript
+Location: routes/expenses.js
+Relative Path: routes
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+MD5: 82104b6a309217e14347ac46f59203c6
+SHA256: 311137adf76cca7588530abd6cfc45096da744a98a4eed762725a3003d9d993b
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import express from "express";
+import { handleExpenseCreation, handleExpenseDeletion } from "../controller/expenseController.js";
+
+const router = express.Router();
+
+router.post("/add/:eventID", handleExpenseCreation);
+
+router.post("/delete/:expenseID", handleExpenseDeletion);
+
+export default router;
+================================================================================
+
+
+================================================================================
+FILE: utility/joincodes.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 612 B
+Extension: .js
+Language: javascript
+Location: utility/joincodes.js
+Relative Path: utility
+Created: 2026-04-13 16:48:52 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-13 16:51:33 (Asia/Calcutta / GMT+06:30)
+MD5: b9e805002a69f619f1c125a293050a29
+SHA256: 992e55723231ef045ebadf6e07df7a849b8840f214b0cded1f3b6d48d7459af4
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import db from "../db.js";
+
+function generateJoinCode(length = 6) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+
+  for (let i = 0; i < length; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return code;
+}
+
+async function createUniqueCode() {
+
+  let code;
+  let exists = true;
+
+  while (exists) {
+
+    code = generateJoinCode();
+
+    const result = await db.query(
+      "SELECT 1 FROM events WHERE join_code=$1",
+      [code]
+    );
+
+    exists = result.rows.length > 0;
+  }
+
+  return code;
+}
+
+export default createUniqueCode;
+================================================================================
+
+
+================================================================================
+BINARY/EXCLUDED FILES (not included in text content)
+================================================================================
+- views/partials/footer.ejs
+- views/partials/header.ejs
+
+
+================================================================================
+BINARY/EXCLUDED FILES (not included in text content)
+================================================================================
+- views/create-event.ejs
+- views/dashboard.ejs
+- views/event.ejs
+- views/home.ejs
+- views/join-event.ejs
+- views/layout.ejs
+- views/login.ejs
+- views/register.ejs
+
+
+================================================================================
+FILE: db.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 532 B
+Extension: .js
+Language: javascript
+Location: db.js
+Relative Path: root
+Created: 2026-03-31 02:08:10 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-13 13:16:51 (Asia/Calcutta / GMT+06:30)
+MD5: 66261186fd892d33a65ea4957486143d
+SHA256: b6cf86e3c9d0ba2654cda852e992d24884879eb76591e7505d555fe1a7ff8d7e
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import pkg from "pg";
+import env from "dotenv";
+// import http from "http";
+import { neon } from "@neondatabase/serverless"
+
+
+env.config();
+// const db = new pg.Pool({
+//   user: process.env.DB_USER,
+//   host: process.env.DB_HOST,
+//   database: process.env.DB_DATABASE,
+//   password: process.env.DB_PASSWORD,
+//   port: process.env.DB_PORT,
+// })
+
+const { Pool } = pkg;
+
+const db = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+export default db;
+================================================================================
+
+
+================================================================================
+FILE: dbOnline.txt
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 8.03 KB
+Extension: .txt
+Language: text
+Location: dbOnline.txt
+Relative Path: root
+Created: 2026-04-13 13:16:51 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-04-13 13:16:51 (Asia/Calcutta / GMT+06:30)
+MD5: 5697b734b73904871e71b84884fd21cd
+SHA256: 5830b05821c28e81f00fb6dda8836c27a62caf099c72a3a8be02d8373d95a186
+Encoding: UTF-8
+
+FILE CONTENT:
+----------------------------------------
+Reminder for online database setup file
+# 💡 AI Prompt: Connect ExpressJS to Neon Postgres
+
+**Role:** You are an expert software agent specializing in Node.js and the ExpressJS framework. Your task is to configure the current ExpressJS project to connect to a Neon Postgres database.
+
+**Purpose:** To connect the current ExpressJS project to Neon Postgres by installing a database driver, configuring environment variables, and creating a test route to validate the connection.
+
+**Scope:**
+- Must be run inside an existing Node.js project directory with ExpressJS installed.
+- Assumes the user has a Neon project and access to their full connection string.
+
+✅ Read and understand the entire instruction set before executing.
+
+---
+
+## 📋 Prerequisites
+
+- This prompt must be run inside an existing ExpressJS project directory. Do not proceed if no ExpressJS project is detected. You can identify an ExpressJS project by the presence of `express` in the `dependencies` section of `package.json`.
+- **Setup for New Projects:** If the user does not have an existing ExpressJS project, create one by running the following commands in their terminal:
+
+  ```bash
+  # mkdir my-express-app && cd my-express-app # Create folder if needed
+  npm init -y
+  npm install express
+  ```
+
+---
+
+## 🛠️ Instructions (for AI-enabled editors)
+
+When this prompt is triggered, automatically configure the open ExpressJS project as follows:
+
+### 1. Install Dependencies
+
+1.  **Prompt the user to select a PostgreSQL driver.** Present the following options, explaining the ideal use case for each:
+
+    *   **`@neondatabase/serverless` (Recommended for Serverless):** Optimized for serverless and edge functions with HTTP connections. Best choice for apps deployed on Vercel, Netlify, or AWS Lambda.
+    *   **`postgres` (postgres.js):** A fast, full-featured client, great for both serverless and traditional Node.js server environments.
+    *   **`pg` (node-postgres):** The classic, widely-used driver for traditional, long-running Node.js servers.
+
+    Make sure to ask the user to choose one of the above options and do not proceed until they provide their choice. Clearly explain the pros of each option to help them decide.
+
+2.  Based on the user's selection, run the corresponding installation command. Also install `dotenv` for managing environment variables.
+
+    ```bash
+    # For @neondatabase/serverless
+    npm install @neondatabase/serverless
+
+    # For postgres (postgres.js)
+    npm install postgres
+
+    # For pg (node-postgres)
+    npm install pg
+
+    # Install dotenv for all options
+    npm i dotenv
+    ```
+
+---
+
+### 2. Configure Environment Variables
+
+1.  Check for the presence of a `.env` file at the root of the project. If it doesn't exist, create one.
+2.  Add the following `DATABASE_URL` parameter to the `.env` file and **prompt the user to replace the placeholder value** with their complete connection string from Neon.
+
+    ```dotenv title=".env"
+    DATABASE_URL="postgresql://user:password@endpoint.neon.tech/neondb?sslmode=require&channel_binding=require"
+    ```
+
+3.  Direct the user to find this value in the **Neon Console → Project → Dashboard → Connect**.
+
+---
+
+### 3. Create an Example to Test the Connection
+
+To provide a clear way to verify the setup, create a main application file that queries the database and returns the PostgreSQL version.
+
+1.  **Locate or create the main entry point file** (usually `index.js`). If it doesn't exist, create it.
+2.  **Populate the file with the code that corresponds to the driver selected in Step 1.** This code will set up a basic Express server with a single root route (`/`) to test the database connection.
+
+    #### Option A: Using `@neondatabase/serverless`
+
+    ```javascript title="index.js"
+    require('dotenv').config();
+    const express = require('express');
+    const { neon } = require('@neondatabase/serverless');
+
+    const app = express();
+    const PORT = process.env.PORT || 3000;
+
+    const sql = neon(process.env.DATABASE_URL);
+
+    app.get('/', async (req, res) => {
+      try {
+        const [result] = await sql`SELECT version()`;
+        const version = result?.version || 'No version found';
+        res.json({
+          message: 'Connection successful!',
+          version: version,
+        });
+      } catch (error) {
+        console.error('Database query failed:', error);
+        res.status(500).json({ error: 'Failed to connect to the database.' });
+      }
+    });
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+    ```
+
+    #### Option B: Using `postgres` (postgres.js)
+
+    ```javascript title="index.js"
+    require('dotenv').config();
+    const express = require('express');
+    const postgres = require('postgres');
+
+    const app = express();
+    const PORT = process.env.PORT || 3000;
+
+    const sql = postgres(process.env.DATABASE_URL);
+
+    app.get('/', async (req, res) => {
+      try {
+        const [result] = await sql`SELECT version()`;
+        const version = result?.version || 'No version found';
+        res.json({
+          message: 'Connection successful!',
+          version: version,
+        });
+      } catch (error) {
+        console.error('Database query failed:', error);
+        res.status(500).json({ error: 'Failed to connect to the database.' });
+      }
+    });
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+    ```
+
+    #### Option C: Using `pg` (node-postgres)
+
+    ```javascript title="index.js"
+    require('dotenv').config();
+    const express = require('express');
+    const { Pool } = require('pg');
+
+    const app = express();
+    const PORT = process.env.PORT || 3000;
+
+    // Create a connection pool. The pool will manage connections for you.
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL
+    });
+
+    app.get('/', async (req, res) => {
+      let client;
+      try {
+        client = await pool.connect();
+        const { rows } = await client.query('SELECT version()');
+        const version = rows[0]?.version || 'No version found';
+        res.json({
+          message: 'Connection successful!',
+          version: version,
+        });
+      } catch (error) {
+        console.error('Database query failed:', error);
+        res.status(500).json({ error: 'Failed to connect to the database.' });
+      } finally {
+        // Make sure to release the client back to the pool
+        client?.release();
+      }
+    });
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+    ```
+
+---
+
+## 🚀 Next Steps
+
+Once the file modifications are complete:
+
+1.  Verify the user has correctly set their `DATABASE_URL` in the `.env` file. Do not proceed if placeholder values are still present.
+2.  Start the Express development server:
+    ```bash
+    node index.js
+    ```
+3.  Inform the user that the setup is complete. To test the connection, they can visit `http://localhost:3000` in their browser. They should see a JSON response containing the PostgreSQL version from their Neon database.
+
+---
+
+## ✅ Validation Rules for AI
+
+Before suggesting code or making edits, ensure:
+- A supported PostgreSQL driver (`@neondatabase/serverless`, `postgres`, or `pg`) is installed as a dependency in `package.json`.
+- A `.env` file is present or has been created with a `DATABASE_URL` placeholder.
+- An `index.js` file is present and contains a root (`/`) route handler.
+- The test route correctly imports and uses the chosen driver's syntax.
+- The connection logic is wrapped in a `try...catch` block to handle potential errors gracefully.
+
+---
+
+## ❌ Do Not
+
+- **Do not hardcode credentials** or sensitive information in any `.js` source code file. Always use `process.env`.
+- **Do not output the user's connection string** in any response or log.
+- Do not delete or modify other user-defined routes or application logic. Only add the root test route if one does not exist.
+================================================================================
+
+
+================================================================================
+FILE: package-lock.json
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 70.43 KB
+Extension: .json
+Language: json
+Location: package-lock.json
+Relative Path: root
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+MD5: 6efa48bc3072d4a050bf5a4111a0904a
+SHA256: 65ff07faa2c69359bd1f4be539edf584eb834c82407b17850861598f923dd35b
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
 {
   "name": "splitter",
   "version": "1.0.0",
@@ -1962,3 +3759,235 @@
     }
   }
 }
+
+================================================================================
+
+
+================================================================================
+FILE: package.json
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 1.1 KB
+Extension: .json
+Language: json
+Location: package.json
+Relative Path: root
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+MD5: 4c64d5f416c34bdfab760b64fd07aaa6
+SHA256: 8833a80e4a0d1bac00d37a57e88cde32e640bbceb3501c5f01f13027570c832a
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+{
+  "name": "splitter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon server.js",
+    "dev": "nodemon -e js,ejs,json server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TLxGHOST/Splitter.git"
+  },
+  "keywords": [],
+  "author": "TLxGHOST",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/TLxGHOST/Splitter/issues"
+  },
+  "homepage": "https://github.com/TLxGHOST/Splitter#readme",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "axios": "^1.13.6",
+    "bcrypt": "^6.0.0",
+    "connect-pg-simple": "^10.0.0",
+    "dotenv": "^17.3.1",
+    "ejs": "^5.0.1",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "http": "^0.0.1-security",
+    "passport": "^0.7.0",
+    "passport-google-oauth2": "^0.2.0",
+    "passport-google-oidc": "^0.1.0",
+    "passport-local": "^1.0.0",
+    "pg": "^8.20.0",
+    "session": "^0.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
+
+================================================================================
+
+
+================================================================================
+FILE: readme.md
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 1.09 KB
+Extension: .md
+Language: text
+Location: readme.md
+Relative Path: root
+Created: 2026-03-18 22:24:03 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-03-31 12:02:44 (Asia/Calcutta / GMT+06:30)
+MD5: b52af07994d85ebdc2aacf8e0bea47be
+SHA256: 13f75224b0d83793c2ef4488f0b11cb8697acc893b54d62003fcf8045a0a6b18
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+# Introduction
+
+This is a personal project focused on learning backend security best practices. Built with Express.js and Node.js, it solves bill-splitting problems between friends on trips and occasions.
+
+# LIFE CYCLE of Server(as of now)
+
+Browser -> Expresss Server -> Session -> Database ->middleware -> Route -> Response
+
+Tasks: Implemented user registration and login via local strategey using Passport.
+Event filler fixed and Authentication of session implemented with permanent storage.
+
+As of 31-2-26
+Added neon database to branch for easy setup of project in each device .
+checkout using
+
+- `git switch dbOnline`
+
+# Future Plans
+
+1. completing other routes . /dahboard, /events/create, /events/join, /events/{event_id}
+2. Completing the data flow structure and once everything in place refactoring the code for future developement and scalability.
+   (NOTE : All the works done by collaboraters should be done using new branches and not directly on the main branch. Once the work is done, create a pull request and get it reviewed by other members before merging it to the main branch.)
+
+================================================================================
+
+
+================================================================================
+FILE: server.js
+================================================================================
+
+FILE INFORMATION:
+----------------------------------------
+Size: 2.13 KB
+Extension: .js
+Language: javascript
+Location: server.js
+Relative Path: root
+Created: 2026-05-30 02:35:14 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-30 05:29:29 (Asia/Calcutta / GMT+06:30)
+MD5: fa492d5c14505e95f027805e12feff9c
+SHA256: b92679c35de2409880303b8af8fb6972ce218439e895bc0374664bf7c467d974
+Encoding: ASCII
+
+FILE CONTENT:
+----------------------------------------
+import express from "express";
+import dotenv from "dotenv";
+import db from "./db.js";
+import bcrypt from "bcrypt";
+import session from "express-session";
+import passport from "passport";
+import { Strategy } from "passport-local";
+import pgSession from "connect-pg-simple";
+import createUniqueCode from "./utility/joincodes.js"
+import eventsRouter from "./routes/events.js";
+import staticRouter from "./routes/basePath.js";
+import { eventFiller } from "./middleware/eventLoader.js";
+import GoogleStrategy from "passport-google-oauth2";
+import expenses from "./model/expense.js";
+import expensesRouter from "./routes/expenses.js";
+import configPassport from "./config/passport.js";
+
+dotenv.config();
+
+
+const PORT = process.env.PORT || 3000;
+const saltRound = Number(process.env.SALT_ROUND);
+
+const app = express();
+
+// db.connect();
+
+const PgSession = pgSession(session);
+
+const sessionStore = new PgSession({
+  pool: db,
+  tableName: "session"
+});
+
+app.use(session({
+  secret: process.env.SECRET,
+  resave: false,
+  saveUninitialized: false,
+  store: sessionStore,
+  cookie: {
+    maxAge: 1000 * 60 * 60,
+  }
+}));
+
+
+configPassport();
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.set("view engine", "ejs");
+app.use(express.static("public"));
+app.use(express.urlencoded({ extended: true }));
+
+
+/* ---------- GLOBAL TEMPLATE VARIABLES ---------- */
+
+app.use((req, res, next) => {
+  res.locals.isAuth = req.isAuthenticated();
+  res.locals.events = [];
+  next();
+});
+
+
+
+
+/* ---------- ROUTES ---------- */
+
+app.use("/", staticRouter);
+
+app.post("/login",
+  passport.authenticate("local", {
+    successRedirect: "/dashboard",
+    failureRedirect: "/login"
+  })
+);
+
+app.get("/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+app.get("/auth/google/callback",
+  passport.authenticate("google", {
+    successRedirect: "/dashboard",
+    failureRedirect: "/login"
+  })
+);
+
+app.use("/events", eventsRouter);
+
+app.use("/expenses", expensesRouter);
+
+
+
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`ALIVE AND KICKING ON PORT ${PORT}`);
+});
+================================================================================

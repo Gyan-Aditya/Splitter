@@ -1,5 +1,5 @@
-import db from "../db";
-db.connect();
+import db from "../db.js";
+// db.connect();
 
 async function createUsersTable() {
 	const users = await db.query(`CREATE TABLE users(

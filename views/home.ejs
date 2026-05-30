@@ -1,18 +1,17 @@
 <%- include("partials/header") %>
 
   <section class="hero">
-
-    <h1>Split Bills With Friends</h1>
-
-    <p>Track shared expenses for trips, dinners and events.</p>
-
+    <div class="hero-badge">₹ Split bills instantly</div>
+    <h1>Stop doing the <span>math</span>.<br>Start enjoying the trip.</h1>
+    <p>Track shared expenses for trips, dinners, and events — settle up without the awkward conversations.</p>
     <div class="hero-buttons">
-      <% if(!isAuth){ %>
-        <a class="btn-primary" href="/register">Get Started</a>
-        <a class="btn-secondary" href="/login">Login</a>
-        <% } %>
+      <% if (!isAuth) { %>
+        <a href="/register" class="btn btn-primary">Get Started — it's free</a>
+        <a href="/login" class="btn btn-secondary">Login</a>
+        <% } else { %>
+          <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+          <% } %>
     </div>
-
   </section>
 
   <%- include("partials/footer") %>
