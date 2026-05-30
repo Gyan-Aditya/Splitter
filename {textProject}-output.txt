@@ -5,7 +5,7 @@ PROJECT EXPORT FOR LLMs
 PROJECT INFORMATION:
 --------------------------------------------------
 Project Name: Splitter
-Generated On: 2026-05-30 17:58:54 (Asia/Calcutta / GMT+06:30)
+Generated On: 2026-05-30 20:14:55 (Asia/Calcutta / GMT+06:30)
 Total Files Processed: 32
 Export Tool: Easy Whole Project to Single Text File for LLMs v1.1.0
 Tool Author: Jota / José Guilherme Pandolfi
@@ -26,11 +26,11 @@ PROJECT STRUCTURE
 │   └── 📄 passport.js (2.61 KB)
 ├── 📁 controller/
 │   ├── 📄 authController.js (759 B)
-│   ├── 📄 eventController.js (4.4 KB)
+│   ├── 📄 eventController.js (4.61 KB)
 │   ├── 📄 expenseController.js (1.36 KB)
-│   └── 📄 paymentController.js (2.4 KB)
+│   └── 📄 paymentController.js (2.56 KB)
 ├── 📁 middleware/
-│   └── 📄 eventLoader.js (5.05 KB)
+│   └── 📄 eventLoader.js (6.11 KB)
 ├── 📁 model/
 │   ├── 📄 event_members.js (384 B)
 │   ├── 📄 events.js (369 B)
@@ -42,7 +42,7 @@ PROJECT STRUCTURE
 │   └── 📁 images/
 ├── 📁 routes/
 │   ├── 📄 basePath.js (1.17 KB)
-│   ├── 📄 events.js (592 B)
+│   ├── 📄 events.js (775 B)
 │   ├── 📄 expenses.js (309 B)
 │   └── 📄 payments.js (284 B)
 ├── 📁 utility/
@@ -73,7 +73,7 @@ Total Files: 32
 Total Directories: 11
 Text Files: 22
 Binary Files: 10
-Total Size: 140.19 KB
+Total Size: 141.79 KB
 
 FILE TYPES DISTRIBUTION:
 ------------------------------
@@ -268,15 +268,15 @@ FILE: controller/eventController.js
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 4.4 KB
+Size: 4.61 KB
 Extension: .js
 Language: javascript
 Location: controller/eventController.js
 Relative Path: controller
 Created: 2026-05-30 12:17:41 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 17:55:41 (Asia/Calcutta / GMT+06:30)
-MD5: d5be93e7ddc57f8c31a15313554c10b9
-SHA256: ba2c56a8200e65fa8addff321d03031375cc089ef69d4bf09964dcc92e83f9aa
+Modified: 2026-05-30 20:14:54 (Asia/Calcutta / GMT+06:30)
+MD5: 2af7ba19d82c412c44a949fe449e69eb
+SHA256: 0aee415a4be05a05d31c7601f56ecf2b2b8acff379e86e3562d061764a12ee83
 Encoding: ASCII
 
 FILE CONTENT:
@@ -285,28 +285,33 @@ import db from "../db.js";
 import createUniqueCode from "../utility/joincodes.js";
 
 async function handleCreateEvent(req, res) {
-
   if (!req.isAuthenticated()) {
     return res.redirect("/login");
   }
 
   const joinCode = await createUniqueCode();
 
-  await db.query(
-    "INSERT INTO events (name, join_code, created_by) VALUES ($1,$2,$3)",
+  const eventResult = await db.query(
+    "INSERT INTO events (name, join_code, created_by) VALUES ($1,$2,$3) RETURNING id",
     [req.body.name, joinCode, req.user.id]
   );
 
+  const eventID = eventResult.rows[0].id;
 
+  // add creator as member so they appear in member list and counts
+  await db.query(
+    "INSERT INTO event_members (event_id, user_id) VALUES ($1,$2)",
+    [eventID, req.user.id]
+  );
 
   res.redirect("/dashboard");
 }
 
 async function handleJoinEvent(req, res) {
-
   if (!req.isAuthenticated()) {
     return res.redirect("/login");
   }
+
   const joinCode = req.body.code;
 
   const eventResult = await db.query(
@@ -318,7 +323,6 @@ async function handleJoinEvent(req, res) {
     return res.status(404).send("Event not found");
   }
 
-  // Check if user is already a member
   const memberResult = await db.query(
     "SELECT * FROM event_members WHERE event_id=$1 AND user_id=$2",
     [eventResult.rows[0].id, req.user.id]
@@ -328,7 +332,6 @@ async function handleJoinEvent(req, res) {
     return res.status(400).send("You are already a member of this event");
   }
 
-  // Add user to event
   await db.query(
     "INSERT INTO event_members (event_id, user_id) VALUES ($1,$2)",
     [eventResult.rows[0].id, req.user.id]
@@ -374,7 +377,7 @@ const handleViewEvent = async (req, res) => {
       [eventID]
     );
 
-    // per member spending
+    // per member spending — key as integer
     const memberSpendingResult = await db.query(
       `SELECT paid_by, SUM(amount) AS total
        FROM expenses
@@ -385,10 +388,10 @@ const handleViewEvent = async (req, res) => {
 
     const spendingMap = {};
     memberSpendingResult.rows.forEach(row => {
-      spendingMap[row.paid_by] = parseFloat(row.total) || 0;
+      spendingMap[parseInt(row.paid_by)] = parseFloat(row.total) || 0;
     });
 
-    // already settled payments FROM current user TO others in this event
+    // settlements paid by current user to others — key as integer
     const settlementsResult = await db.query(
       `SELECT payee_id, SUM(amount) AS total
        FROM settlements
@@ -399,7 +402,7 @@ const handleViewEvent = async (req, res) => {
 
     const settledMap = {};
     settlementsResult.rows.forEach(row => {
-      settledMap[row.payee_id] = parseFloat(row.total) || 0;
+      settledMap[parseInt(row.payee_id)] = parseFloat(row.total) || 0;
     });
 
     const totalExpenses = expensesResult.rows
@@ -408,17 +411,20 @@ const handleViewEvent = async (req, res) => {
     const memberCount = membersResult.rows.length;
     const fairShare = memberCount > 0 ? totalExpenses / memberCount : 0;
 
+    const myPaid = spendingMap[parseInt(req.user.id)] || 0;
+    const myDebt = Math.max(0, fairShare - myPaid);
     const membersWithData = membersResult.rows.map(m => {
-      const paid = spendingMap[m.id] || 0;
-      const balance = paid - fairShare;  // positive = others owe them, negative = they owe others
-      const alreadySettled = settledMap[m.id] || 0;
+      const memberID = parseInt(m.id);
+      const paid = spendingMap[memberID] || 0;
+
+      const balance = fairShare - paid;
+      const alreadySettled = settledMap[memberID] || 0;
 
       let owedByMe = 0;
-      if (m.id !== req.user.id && balance > 0.01) {
-        // this member paid more than their share
-        // current user owes them their fair portion of that overpayment
-        const myDebt = fairShare - (spendingMap[req.user.id] || 0);
+      if (memberID !== parseInt(req.user.id) && balance > 0.01) {
+        // they overpaid — I owe them a portion
         owedByMe = Math.max(0, Math.min(myDebt, balance) - alreadySettled);
+
       }
 
       return {
@@ -444,7 +450,6 @@ const handleViewEvent = async (req, res) => {
     res.status(500).send("Error loading event");
   }
 };
-
 
 export { handleCreateEvent, handleJoinEvent, handleViewEvent };
 ================================================================================
@@ -528,15 +533,15 @@ FILE: controller/paymentController.js
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 2.4 KB
+Size: 2.56 KB
 Extension: .js
 Language: javascript
 Location: controller/paymentController.js
 Relative Path: controller
 Created: 2026-05-30 17:38:11 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 17:52:00 (Asia/Calcutta / GMT+06:30)
-MD5: 2ff5447b721bcc69addea3ee648cd357
-SHA256: 9e691af1f4d7bc62447be4ce9553452ff136fb75473ea709f1b289f00b6384e8
+Modified: 2026-05-30 19:39:37 (Asia/Calcutta / GMT+06:30)
+MD5: 17f16a50220bfbd95cbd244822a6ad30
+SHA256: 385fbcd7c934a605ef5c4ec1ff30a7048a9ecd146788d1da044184e3daf9a1df
 Encoding: ASCII
 
 FILE CONTENT:
@@ -560,6 +565,11 @@ async function handleCreateOrder(req, res) {
 
     if (!amount || !payeeID || !eventID) {
       return res.status(400).json({ error: "Missing fields" });
+    }
+
+    // prevent paying yourself
+    if (parseInt(payeeID) === parseInt(req.user.id)) {
+      return res.status(400).json({ error: "Cannot pay yourself" });
     }
 
     // amount in paise (Razorpay uses smallest currency unit)
@@ -634,15 +644,15 @@ FILE: middleware/eventLoader.js
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 5.05 KB
+Size: 6.11 KB
 Extension: .js
 Language: javascript
 Location: middleware/eventLoader.js
 Relative Path: middleware
 Created: 2026-05-30 12:17:41 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 12:52:24 (Asia/Calcutta / GMT+06:30)
-MD5: 147e08abab185445b5f33af839973eaf
-SHA256: 4e39e91386638d9661728dd113908fcca0db387194fbdba89949d0607969812d
+Modified: 2026-05-30 20:13:04 (Asia/Calcutta / GMT+06:30)
+MD5: 54a2ac48fb5024caecd93339141fd254
+SHA256: c8c18c9f09a58f9a49d7f8e12b5c6d7ec960bfba37f122cf383efe008b9fa9f7
 Encoding: ASCII
 
 FILE CONTENT:
@@ -651,7 +661,6 @@ import db from "../db.js";
 
 async function eventFiller(req, res, next) {
   try {
-    // Initialize both variables to empty arrays to prevent undefined errors
     if (!req.isAuthenticated()) {
       return res.redirect("/login");
     }
@@ -660,14 +669,11 @@ async function eventFiller(req, res, next) {
 
     req.userID = req.user.id;
     if (req.isAuthenticated()) {
-
       const eventData = await db.query(
         "SELECT * FROM events WHERE created_by=$1",
         [req.user.id]
       );
-
       res.locals.events = eventData.rows || [];
-
     }
 
     next();
@@ -685,11 +691,10 @@ async function joinedEventFiller(req, res, next) {
       const eventData = await db.query(
         `SELECT events.*
          FROM events
-          JOIN event_members ON events.id = event_members.event_id
-          WHERE event_members.user_id = $1`,
+         JOIN event_members ON events.id = event_members.event_id
+         WHERE event_members.user_id = $1`,
         [req.user.id]
       );
-
       res.locals.joinedEvents = eventData.rows || [];
     }
     next();
@@ -699,8 +704,13 @@ async function joinedEventFiller(req, res, next) {
   }
 }
 
-
 async function perHeadFiller(req, res, next) {
+  console.log("=== perHeadFiller ===");
+  console.log("req.params:", req.params);
+  console.log("req.params.id:", req.params.id);
+  console.log("req.url:", req.url);
+  console.log("req.originalUrl:", req.originalUrl);
+
   try {
     if (!req.isAuthenticated()) {
       return res.redirect("/login");
@@ -718,32 +728,50 @@ async function perHeadFiller(req, res, next) {
       return next();
     }
 
-    const totalPaidByMeRes = await db.query(
-      `SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE event_id = $1 AND paid_by = $2`,
-      [eventID, userID]
-    );
-    const myTotalPaid = parseFloat(totalPaidByMeRes.rows[0].total) || 0;
-
-    const totalPaidByOthersRes = await db.query(
-      `SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE event_id = $1 AND paid_by != $2`,
-      [eventID, userID]
-    );
-    const othersTotalPaid = parseFloat(totalPaidByOthersRes.rows[0].total) || 0;
-
-    const membersRes = await db.query(
-      `SELECT COUNT(*) AS count FROM event_members WHERE event_id = $1`,
+    const totalRes = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total 
+       FROM expenses WHERE event_id = $1`,
       [eventID]
     );
-    const membersCount = (parseInt(membersRes.rows[0].count, 10) || 0);
+    const totalExpenses = parseFloat(totalRes.rows[0].total) || 0;
 
-    const totalEventCost = myTotalPaid + othersTotalPaid;
-    const myFairShare = membersCount > 0 ? totalEventCost / membersCount : 0;
+    const memberRes = await db.query(
+      `SELECT COUNT(*) AS count 
+       FROM event_members WHERE event_id = $1`,
+      [eventID]
+    );
+    const memberCount = parseInt(memberRes.rows[0].count, 10) || 1;
 
-    res.locals.perHeadAmount = myTotalPaid - myFairShare;
+    const fairShare = totalExpenses / memberCount;
+
+    const myPaidRes = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total 
+       FROM expenses WHERE event_id = $1 AND paid_by = $2`,
+      [eventID, userID]
+    );
+    const myPaid = parseFloat(myPaidRes.rows[0].total) || 0;
+
+    const iPaidOutRes = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total 
+       FROM settlements
+       WHERE event_id = $1 AND payer_id = $2 AND status = 'paid'`,
+      [eventID, userID]
+    );
+    const iPaidOut = parseFloat(iPaidOutRes.rows[0].total) || 0;
+
+    const iPaidInRes = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total 
+       FROM settlements
+       WHERE event_id = $1 AND payee_id = $2 AND status = 'paid'`,
+      [eventID, userID]
+    );
+    const iPaidIn = parseFloat(iPaidInRes.rows[0].total) || 0;
+
+    res.locals.perHeadAmount = (myPaid - fairShare) - iPaidIn + iPaidOut;
 
     next();
   } catch (err) {
-    console.error("Error in perHeadFiller middleware:", err);
+    console.error("Error in perHeadFiller:", err);
     res.locals.perHeadAmount = 0;
     next(err);
   }
@@ -756,10 +784,6 @@ async function dashboardBalanceFiller(req, res, next) {
     }
 
     const userID = req.user.id;
-    // console.log(userID);
-    // console.log("=== dashboardBalanceFiller ===");
-    // console.log("userID:", userID);
-    // Get all event IDs the user is part of (created or joined)
 
     const allEventsRes = await db.query(
       `SELECT id, name, join_code FROM events WHERE created_by = $1
@@ -771,13 +795,9 @@ async function dashboardBalanceFiller(req, res, next) {
       [userID]
     );
 
-    // console.log("allEvents rows:", allEventsRes.rows);
-
     const allEvents = allEventsRes.rows;
 
-
     if (allEvents.length === 0) {
-      // console.log("No events found, returning early");
       res.locals.eventBalances = [];
       res.locals.overallBalance = 0;
       return next();
@@ -785,8 +805,7 @@ async function dashboardBalanceFiller(req, res, next) {
 
     const eventIDs = allEvents.map(e => e.id);
 
-    // For each event: total paid by user, total paid by others, member count
-    const balanceRes = await db.query(
+    const expenseRes = await db.query(
       `SELECT
          e.id AS event_id,
          COALESCE(SUM(CASE WHEN ex.paid_by = $1 THEN ex.amount ELSE 0 END), 0) AS paid_by_me,
@@ -799,19 +818,47 @@ async function dashboardBalanceFiller(req, res, next) {
       [userID, eventIDs]
     );
 
-    // Map balances back to events
+    const paidOutRes = await db.query(
+      `SELECT event_id, COALESCE(SUM(amount), 0) AS total
+       FROM settlements
+       WHERE payer_id = $1 AND event_id = ANY($2) AND status = 'paid'
+       GROUP BY event_id`,
+      [userID, eventIDs]
+    );
+
+    const paidInRes = await db.query(
+      `SELECT event_id, COALESCE(SUM(amount), 0) AS total
+       FROM settlements
+       WHERE payee_id = $1 AND event_id = ANY($2) AND status = 'paid'
+       GROUP BY event_id`,
+      [userID, eventIDs]
+    );
+
+    const paidOutMap = {};
+    paidOutRes.rows.forEach(r => {
+      paidOutMap[parseInt(r.event_id)] = parseFloat(r.total) || 0;
+    });
+
+    const paidInMap = {};
+    paidInRes.rows.forEach(r => {
+      paidInMap[parseInt(r.event_id)] = parseFloat(r.total) || 0;
+    });
+
     const balanceMap = {};
-    balanceRes.rows.forEach(row => {
+    expenseRes.rows.forEach(row => {
       const total = parseFloat(row.total) || 0;
       const paidByMe = parseFloat(row.paid_by_me) || 0;
       const memberCount = parseInt(row.member_count) || 1;
-      const myFairShare = total / memberCount;
-      balanceMap[row.event_id] = paidByMe - myFairShare;
+      const fairShare = total / memberCount;
+      const paidOut = paidOutMap[parseInt(row.event_id)] || 0;
+      const paidIn = paidInMap[parseInt(row.event_id)] || 0;
+
+      balanceMap[parseInt(row.event_id)] = (paidByMe - fairShare) - paidIn + paidOut;
     });
 
     res.locals.eventBalances = allEvents.map(event => ({
       ...event,
-      balance: balanceMap[event.id] ?? 0
+      balance: balanceMap[parseInt(event.id)] ?? 0
     }));
 
     res.locals.overallBalance = res.locals.eventBalances
@@ -827,9 +874,6 @@ async function dashboardBalanceFiller(req, res, next) {
 }
 
 export { eventFiller, joinedEventFiller, perHeadFiller, dashboardBalanceFiller };
-
-//blank comment added
-
 ================================================================================
 
 
@@ -1861,15 +1905,15 @@ FILE: routes/events.js
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 592 B
+Size: 775 B
 Extension: .js
 Language: javascript
 Location: routes/events.js
 Relative Path: routes
 Created: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-MD5: bd4e1be229011e300c6ab6de11de2987
-SHA256: 8ab3f512dcc155a2fb0e74e576844e4505d57bc3f5d2bcdd7a4f9c5450bf119b
+Modified: 2026-05-30 19:35:36 (Asia/Calcutta / GMT+06:30)
+MD5: 80c87cd2425f7b2a9955264f9a64d9fb
+SHA256: 0de3d75e8246c1271deceba210b8cfdb509a7763aaef9ce3d478dd8b427bea52
 Encoding: ASCII
 
 FILE CONTENT:
@@ -1878,15 +1922,20 @@ import express from "express";
 import { handleCreateEvent, handleJoinEvent, handleViewEvent } from "../controller/eventController.js";
 import { eventFiller, perHeadFiller } from "../middleware/eventLoader.js";
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
-router.get("/create", eventFiller, (req, res) => {
+// router.get("/create", eventFiller, (req, res) => {
+//   res.render("create-event");
+// });
+router.get("/create", (req, res) => {
   res.render("create-event");
 });
-
 router.post("/create", handleCreateEvent);
 
-router.get("/join", eventFiller, (req, res) => {
+// router.get("/join", eventFiller, (req, res) => {
+//   res.render("join-event");
+// });
+router.get("/join", (req, res) => {
   res.render("join-event");
 });
 

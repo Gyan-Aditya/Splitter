@@ -2,7 +2,6 @@ import db from "../db.js";
 
 async function eventFiller(req, res, next) {
   try {
-    // Initialize both variables to empty arrays to prevent undefined errors
     if (!req.isAuthenticated()) {
       return res.redirect("/login");
     }
@@ -11,14 +10,11 @@ async function eventFiller(req, res, next) {
 
     req.userID = req.user.id;
     if (req.isAuthenticated()) {
-
       const eventData = await db.query(
         "SELECT * FROM events WHERE created_by=$1",
         [req.user.id]
       );
-
       res.locals.events = eventData.rows || [];
-
     }
 
     next();
@@ -36,11 +32,10 @@ async function joinedEventFiller(req, res, next) {
       const eventData = await db.query(
         `SELECT events.*
          FROM events
-          JOIN event_members ON events.id = event_members.event_id
-          WHERE event_members.user_id = $1`,
+         JOIN event_members ON events.id = event_members.event_id
+         WHERE event_members.user_id = $1`,
         [req.user.id]
       );
-
       res.locals.joinedEvents = eventData.rows || [];
     }
     next();
@@ -50,8 +45,13 @@ async function joinedEventFiller(req, res, next) {
   }
 }
 
-
 async function perHeadFiller(req, res, next) {
+  console.log("=== perHeadFiller ===");
+  console.log("req.params:", req.params);
+  console.log("req.params.id:", req.params.id);
+  console.log("req.url:", req.url);
+  console.log("req.originalUrl:", req.originalUrl);
+
   try {
     if (!req.isAuthenticated()) {
       return res.redirect("/login");
@@ -69,32 +69,50 @@ async function perHeadFiller(req, res, next) {
       return next();
     }
 
-    const totalPaidByMeRes = await db.query(
-      `SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE event_id = $1 AND paid_by = $2`,
-      [eventID, userID]
-    );
-    const myTotalPaid = parseFloat(totalPaidByMeRes.rows[0].total) || 0;
-
-    const totalPaidByOthersRes = await db.query(
-      `SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE event_id = $1 AND paid_by != $2`,
-      [eventID, userID]
-    );
-    const othersTotalPaid = parseFloat(totalPaidByOthersRes.rows[0].total) || 0;
-
-    const membersRes = await db.query(
-      `SELECT COUNT(*) AS count FROM event_members WHERE event_id = $1`,
+    const totalRes = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total 
+       FROM expenses WHERE event_id = $1`,
       [eventID]
     );
-    const membersCount = (parseInt(membersRes.rows[0].count, 10) || 0);
+    const totalExpenses = parseFloat(totalRes.rows[0].total) || 0;
 
-    const totalEventCost = myTotalPaid + othersTotalPaid;
-    const myFairShare = membersCount > 0 ? totalEventCost / membersCount : 0;
+    const memberRes = await db.query(
+      `SELECT COUNT(*) AS count 
+       FROM event_members WHERE event_id = $1`,
+      [eventID]
+    );
+    const memberCount = parseInt(memberRes.rows[0].count, 10) || 1;
 
-    res.locals.perHeadAmount = myTotalPaid - myFairShare;
+    const fairShare = totalExpenses / memberCount;
+
+    const myPaidRes = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total 
+       FROM expenses WHERE event_id = $1 AND paid_by = $2`,
+      [eventID, userID]
+    );
+    const myPaid = parseFloat(myPaidRes.rows[0].total) || 0;
+
+    const iPaidOutRes = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total 
+       FROM settlements
+       WHERE event_id = $1 AND payer_id = $2 AND status = 'paid'`,
+      [eventID, userID]
+    );
+    const iPaidOut = parseFloat(iPaidOutRes.rows[0].total) || 0;
+
+    const iPaidInRes = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total 
+       FROM settlements
+       WHERE event_id = $1 AND payee_id = $2 AND status = 'paid'`,
+      [eventID, userID]
+    );
+    const iPaidIn = parseFloat(iPaidInRes.rows[0].total) || 0;
+
+    res.locals.perHeadAmount = (myPaid - fairShare) - iPaidIn + iPaidOut;
 
     next();
   } catch (err) {
-    console.error("Error in perHeadFiller middleware:", err);
+    console.error("Error in perHeadFiller:", err);
     res.locals.perHeadAmount = 0;
     next(err);
   }
@@ -107,10 +125,6 @@ async function dashboardBalanceFiller(req, res, next) {
     }
 
     const userID = req.user.id;
-    // console.log(userID);
-    // console.log("=== dashboardBalanceFiller ===");
-    // console.log("userID:", userID);
-    // Get all event IDs the user is part of (created or joined)
 
     const allEventsRes = await db.query(
       `SELECT id, name, join_code FROM events WHERE created_by = $1
@@ -122,13 +136,9 @@ async function dashboardBalanceFiller(req, res, next) {
       [userID]
     );
 
-    // console.log("allEvents rows:", allEventsRes.rows);
-
     const allEvents = allEventsRes.rows;
 
-
     if (allEvents.length === 0) {
-      // console.log("No events found, returning early");
       res.locals.eventBalances = [];
       res.locals.overallBalance = 0;
       return next();
@@ -136,8 +146,7 @@ async function dashboardBalanceFiller(req, res, next) {
 
     const eventIDs = allEvents.map(e => e.id);
 
-    // For each event: total paid by user, total paid by others, member count
-    const balanceRes = await db.query(
+    const expenseRes = await db.query(
       `SELECT
          e.id AS event_id,
          COALESCE(SUM(CASE WHEN ex.paid_by = $1 THEN ex.amount ELSE 0 END), 0) AS paid_by_me,
@@ -150,19 +159,47 @@ async function dashboardBalanceFiller(req, res, next) {
       [userID, eventIDs]
     );
 
-    // Map balances back to events
+    const paidOutRes = await db.query(
+      `SELECT event_id, COALESCE(SUM(amount), 0) AS total
+       FROM settlements
+       WHERE payer_id = $1 AND event_id = ANY($2) AND status = 'paid'
+       GROUP BY event_id`,
+      [userID, eventIDs]
+    );
+
+    const paidInRes = await db.query(
+      `SELECT event_id, COALESCE(SUM(amount), 0) AS total
+       FROM settlements
+       WHERE payee_id = $1 AND event_id = ANY($2) AND status = 'paid'
+       GROUP BY event_id`,
+      [userID, eventIDs]
+    );
+
+    const paidOutMap = {};
+    paidOutRes.rows.forEach(r => {
+      paidOutMap[parseInt(r.event_id)] = parseFloat(r.total) || 0;
+    });
+
+    const paidInMap = {};
+    paidInRes.rows.forEach(r => {
+      paidInMap[parseInt(r.event_id)] = parseFloat(r.total) || 0;
+    });
+
     const balanceMap = {};
-    balanceRes.rows.forEach(row => {
+    expenseRes.rows.forEach(row => {
       const total = parseFloat(row.total) || 0;
       const paidByMe = parseFloat(row.paid_by_me) || 0;
       const memberCount = parseInt(row.member_count) || 1;
-      const myFairShare = total / memberCount;
-      balanceMap[row.event_id] = paidByMe - myFairShare;
+      const fairShare = total / memberCount;
+      const paidOut = paidOutMap[parseInt(row.event_id)] || 0;
+      const paidIn = paidInMap[parseInt(row.event_id)] || 0;
+
+      balanceMap[parseInt(row.event_id)] = (paidByMe - fairShare) - paidIn + paidOut;
     });
 
     res.locals.eventBalances = allEvents.map(event => ({
       ...event,
-      balance: balanceMap[event.id] ?? 0
+      balance: balanceMap[parseInt(event.id)] ?? 0
     }));
 
     res.locals.overallBalance = res.locals.eventBalances
@@ -178,5 +215,3 @@ async function dashboardBalanceFiller(req, res, next) {
 }
 
 export { eventFiller, joinedEventFiller, perHeadFiller, dashboardBalanceFiller };
-
-//blank comment added

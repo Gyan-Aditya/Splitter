@@ -19,6 +19,11 @@ async function handleCreateOrder(req, res) {
       return res.status(400).json({ error: "Missing fields" });
     }
 
+    // prevent paying yourself
+    if (parseInt(payeeID) === parseInt(req.user.id)) {
+      return res.status(400).json({ error: "Cannot pay yourself" });
+    }
+
     // amount in paise (Razorpay uses smallest currency unit)
     const order = await razorpay.orders.create({
       amount: Math.round(parseFloat(amount) * 100),
