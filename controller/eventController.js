@@ -1,7 +1,7 @@
 import db from "../db.js";
 import createUniqueCode from "../utility/joincodes.js";
 
-async function handleCreateEvent(req, res){
+async function handleCreateEvent(req, res) {
 
   if (!req.isAuthenticated()) {
     return res.redirect("/login");
@@ -14,10 +14,7 @@ async function handleCreateEvent(req, res){
     [req.body.name, joinCode, req.user.id]
   );
 
-  await db.query(
-    "INSERT INTO event_members (event_id, user_id) VALUES ((SELECT id FROM events WHERE join_code=$1), $2)",
-    [joinCode, req.user.id]
-  );
+
 
   res.redirect("/dashboard");
 }
@@ -107,4 +104,4 @@ const handleViewEvent = async (req, res) => {
   }
 }
 
-export {handleCreateEvent, handleJoinEvent, handleViewEvent};
+export { handleCreateEvent, handleJoinEvent, handleViewEvent };
