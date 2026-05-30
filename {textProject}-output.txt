@@ -5,7 +5,7 @@ PROJECT EXPORT FOR LLMs
 PROJECT INFORMATION:
 --------------------------------------------------
 Project Name: Splitter
-Generated On: 2026-05-30 20:14:55 (Asia/Calcutta / GMT+06:30)
+Generated On: 2026-05-30 20:40:34 (Asia/Calcutta / GMT+06:30)
 Total Files Processed: 32
 Export Tool: Easy Whole Project to Single Text File for LLMs v1.1.0
 Tool Author: Jota / José Guilherme Pandolfi
@@ -30,7 +30,7 @@ PROJECT STRUCTURE
 │   ├── 📄 expenseController.js (1.36 KB)
 │   └── 📄 paymentController.js (2.56 KB)
 ├── 📁 middleware/
-│   └── 📄 eventLoader.js (6.11 KB)
+│   └── 📄 eventLoader.js (6.46 KB)
 ├── 📁 model/
 │   ├── 📄 event_members.js (384 B)
 │   ├── 📄 events.js (369 B)
@@ -52,7 +52,7 @@ PROJECT STRUCTURE
 │   │   ├── 📄 footer.ejs (115 B)
 │   │   └── 📄 header.ejs (750 B)
 │   ├── 📄 create-event.ejs (645 B)
-│   ├── 📄 dashboard.ejs (6.31 KB)
+│   ├── 📄 dashboard.ejs (6.75 KB)
 │   ├── 📄 event.ejs (7.93 KB)
 │   ├── 📄 home.ejs (701 B)
 │   ├── 📄 join-event.ejs (746 B)
@@ -73,7 +73,7 @@ Total Files: 32
 Total Directories: 11
 Text Files: 22
 Binary Files: 10
-Total Size: 141.79 KB
+Total Size: 142.58 KB
 
 FILE TYPES DISTRIBUTION:
 ------------------------------
@@ -644,15 +644,15 @@ FILE: middleware/eventLoader.js
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 6.11 KB
+Size: 6.46 KB
 Extension: .js
 Language: javascript
 Location: middleware/eventLoader.js
 Relative Path: middleware
 Created: 2026-05-30 12:17:41 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 20:13:04 (Asia/Calcutta / GMT+06:30)
-MD5: 54a2ac48fb5024caecd93339141fd254
-SHA256: c8c18c9f09a58f9a49d7f8e12b5c6d7ec960bfba37f122cf383efe008b9fa9f7
+Modified: 2026-05-30 20:39:44 (Asia/Calcutta / GMT+06:30)
+MD5: da1ee9e2ac84b891be4f426d3443c188
+SHA256: 73f3208a4c378b346b591be1af8fa2f4eb9be6de41c6a0add9c0777af6cd0172
 Encoding: ASCII
 
 FILE CONTENT:
@@ -674,6 +674,14 @@ async function eventFiller(req, res, next) {
         [req.user.id]
       );
       res.locals.events = eventData.rows || [];
+
+      res.locals.events = eventData.rows || [];
+      res.locals.createdEventIDs = new Set(eventData.rows.map(e => e.id));
+      // const eventIDSet = new Set(res.locals.events.map(e => e.id));
+
+      //only events pass jo user created 
+      // const resultQuery= await db.query("SELECT id FROM events  ");
+      // res.locals.eventsCreatedByuser=
     }
 
     next();
@@ -683,6 +691,8 @@ async function eventFiller(req, res, next) {
     next();
   }
 }
+
+
 
 async function joinedEventFiller(req, res, next) {
   try {

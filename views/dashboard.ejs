@@ -33,7 +33,6 @@
               <% } %>
       </div>
     </div>
-
     <% if (typeof eventBalances !=='undefined' && eventBalances.length> 0) { %>
 
       <div class="charts-grid">
@@ -61,23 +60,33 @@
       <div class="event-grid">
         <% eventBalances.forEach(event=> {
           const isPositive = event.balance >= 0;
+          const isCreator = createdEventIDs.has(event.id);
           %>
           <div class="event-card">
             <h3>
               <%= event.name %>
             </h3>
-            <span class="join-code-pill">
-              <%= event.join_code %>
-            </span>
-            <div class="event-balance <%= isPositive ? 'event-balance-positive' : 'event-balance-negative' %>">
-              <span class="event-balance-label">
-                <%= isPositive ? 'You are owed' : 'You owe' %>
-              </span>
-              <span class="event-balance-amount">
-                <%= isPositive ? '+' : '' %>₹<%= Math.abs(event.balance).toFixed(2) %>
-              </span>
-            </div>
-            <a href="/events/<%= event.id %>" class="open-link">Open event →</a>
+            <% if (isCreator) { %>
+              <form action="/events/delete/<%= event.id %>" method="POST">
+                <button type="submit" class="btn btn-danger" style="font-size:11px; padding:4px 10px;">
+                  Delete
+                </button>
+              </form>
+              <% } %>
+                <span class="join-code-pill">
+                  <%= event.join_code %>
+                </span>
+                <div class="event-balance <%= isPositive ? 'event-balance-positive' : 'event-balance-negative' %>">
+                  <span class="event-balance-label">
+                    <%= isPositive ? 'You are owed' : 'You owe' %>
+                  </span>
+                  <span class="event-balance-amount">
+                    <%= isPositive ? '+' : '' %>₹<%= Math.abs(event.balance).toFixed(2) %>
+                  </span>
+                  set
+                </div>
+                <a href="/events/<%= event.id %>" class="open-link">Open event →</a>
+
           </div>
           <% }) %>
       </div>

@@ -15,6 +15,14 @@ async function eventFiller(req, res, next) {
         [req.user.id]
       );
       res.locals.events = eventData.rows || [];
+
+      res.locals.events = eventData.rows || [];
+      res.locals.createdEventIDs = new Set(eventData.rows.map(e => e.id));
+      // const eventIDSet = new Set(res.locals.events.map(e => e.id));
+
+      //only events pass jo user created 
+      // const resultQuery= await db.query("SELECT id FROM events  ");
+      // res.locals.eventsCreatedByuser=
     }
 
     next();
@@ -24,6 +32,8 @@ async function eventFiller(req, res, next) {
     next();
   }
 }
+
+
 
 async function joinedEventFiller(req, res, next) {
   try {
