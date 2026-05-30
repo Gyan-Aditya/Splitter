@@ -14,6 +14,11 @@ async function handleCreateEvent(req, res){
     [req.body.name, joinCode, req.user.id]
   );
 
+  await db.query(
+    "INSERT INTO event_members (event_id, user_id) VALUES ((SELECT id FROM events WHERE join_code=$1), $2)",
+    [joinCode, req.user.id]
+  );
+
   res.redirect("/dashboard");
 }
 
