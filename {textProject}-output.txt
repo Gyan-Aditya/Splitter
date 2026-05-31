@@ -5,7 +5,7 @@ PROJECT EXPORT FOR LLMs
 PROJECT INFORMATION:
 --------------------------------------------------
 Project Name: Splitter
-Generated On: 2026-05-30 21:01:30 (Asia/Calcutta / GMT+06:30)
+Generated On: 2026-05-31 04:45:54 (Asia/Calcutta / GMT+06:30)
 Total Files Processed: 32
 Export Tool: Easy Whole Project to Single Text File for LLMs v1.1.0
 Tool Author: Jota / José Guilherme Pandolfi
@@ -23,7 +23,7 @@ Custom File Name Pattern: {textProject}-output
 PROJECT STRUCTURE
 ================================================================================
 ├── 📁 config/
-│   └── 📄 passport.js (2.61 KB)
+│   └── 📄 passport.js (2.64 KB)
 ├── 📁 controller/
 │   ├── 📄 authController.js (759 B)
 │   ├── 📄 eventController.js (4.83 KB)
@@ -73,7 +73,7 @@ Total Files: 32
 Total Directories: 11
 Text Files: 22
 Binary Files: 10
-Total Size: 143.52 KB
+Total Size: 143.55 KB
 
 FILE TYPES DISTRIBUTION:
 ------------------------------
@@ -95,15 +95,15 @@ FILE: config/passport.js
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 2.61 KB
+Size: 2.64 KB
 Extension: .js
 Language: javascript
 Location: config/passport.js
 Relative Path: config
 Created: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-MD5: 3f7a6bb86231201fc1c4a2687fd05a50
-SHA256: 200a300bdbab8ebd250943c5b2bfd7b36224d32b793e5f02af93ecafeb32def6
+Modified: 2026-05-31 04:45:53 (Asia/Calcutta / GMT+06:30)
+MD5: ec9d4361afe5e590e6abd5aa92947961
+SHA256: f5b7006e5ff88dec7719edf320aedab04cc83cfc7d9010b721472f93cc45c522
 Encoding: ASCII
 
 FILE CONTENT:
@@ -151,7 +151,7 @@ export default function passportConfigurations() {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/auth/google/callback"
+    callbackURL: "https://splitter-weog.onrender.com/auth/google/callback"
   },
     async (accessToken, refreshToken, profile, done) => {
       try {
