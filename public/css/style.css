@@ -795,3 +795,11 @@ input::placeholder {
   font-size: 13px;
   margin-bottom: 16px;
 }
+
+.footer a svg {
+  transition: color 0.15s;
+}
+
+.footer a:hover {
+  color: var(--accent) !important;
+}

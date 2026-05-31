@@ -40,10 +40,10 @@ async function validateEmailLegitimacy(email) {
   return { valid: true };
 }
 
-async function handleRegister(req, res) { 
+async function handleRegister(req, res) {
   try {
-    const username = req.body.username; 
-    const password = req.body.password; 
+    const username = req.body.username;
+    const password = req.body.password;
 
     const emailCheck = await validateEmailLegitimacy(username);
     if (!emailCheck.valid) {
@@ -54,14 +54,14 @@ async function handleRegister(req, res) {
       return res.status(400).send("Registration error: Password must be at least 6 characters long.");
     }
 
-    const dbResult = await db.query( 
-      "SELECT * FROM users WHERE email=$1", 
-      [username] 
+    const dbResult = await db.query(
+      "SELECT * FROM users WHERE email=$1",
+      [username]
     );
 
-    if (dbResult.rows.length === 0) { 
-      const hashedPass = await bcrypt.hash(password, saltRound); 
-      await db.query( 
+    if (dbResult.rows.length === 0) {
+      const hashedPass = await bcrypt.hash(password, saltRound);
+      await db.query(
         "INSERT INTO users(email,password) VALUES($1,$2)",
         [username, hashedPass]
       );

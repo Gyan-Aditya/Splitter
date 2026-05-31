@@ -5,7 +5,7 @@ PROJECT EXPORT FOR LLMs
 PROJECT INFORMATION:
 --------------------------------------------------
 Project Name: Splitter
-Generated On: 2026-05-31 07:26:09 (Asia/Calcutta / GMT+06:30)
+Generated On: 2026-05-31 17:01:45 (Asia/Calcutta / GMT+06:30)
 Total Files Processed: 32
 Export Tool: Easy Whole Project to Single Text File for LLMs v1.1.0
 Tool Author: Jota / José Guilherme Pandolfi
@@ -25,7 +25,7 @@ PROJECT STRUCTURE
 ├── 📁 config/
 │   └── 📄 passport.js (2.73 KB)
 ├── 📁 controller/
-│   ├── 📄 authController.js (759 B)
+│   ├── 📄 authController.js (2.25 KB)
 │   ├── 📄 eventController.js (6.41 KB)
 │   ├── 📄 expenseController.js (1.36 KB)
 │   └── 📄 paymentController.js (2.56 KB)
@@ -38,7 +38,7 @@ PROJECT STRUCTURE
 │   └── 📄 users.js (314 B)
 ├── 📁 public/
 │   ├── 📁 css/
-│   │   └── 📄 style.css (14.02 KB)
+│   │   └── 📄 style.css (14.13 KB)
 │   └── 📁 images/
 ├── 📁 routes/
 │   ├── 📄 basePath.js (1.28 KB)
@@ -49,7 +49,7 @@ PROJECT STRUCTURE
 │   └── 📄 joincodes.js (612 B)
 ├── 📁 views/
 │   ├── 📁 partials/
-│   │   ├── 📄 footer.ejs (115 B)
+│   │   ├── 📄 footer.ejs (5.81 KB)
 │   │   └── 📄 header.ejs (750 B)
 │   ├── 📄 create-event.ejs (645 B)
 │   ├── 📄 dashboard.ejs (6.75 KB)
@@ -73,7 +73,7 @@ Total Files: 32
 Total Directories: 11
 Text Files: 22
 Binary Files: 10
-Total Size: 146.39 KB
+Total Size: 153.71 KB
 
 FILE TYPES DISTRIBUTION:
 ------------------------------
@@ -207,30 +207,74 @@ FILE: controller/authController.js
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 759 B
+Size: 2.25 KB
 Extension: .js
 Language: javascript
 Location: controller/authController.js
 Relative Path: controller
-Created: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-MD5: 90974a787d268f1a857710c4135a6b0a
-SHA256: 2fe4a389503b78a0034151e3f08f37eb15c8b0245d8b6794598463c1b4472dc2
+Created: 2026-05-31 10:05:21 (Asia/Calcutta / GMT+06:30)
+Modified: 2026-05-31 10:05:29 (Asia/Calcutta / GMT+06:30)
+MD5: c455db5c67235a7eaeb6a28f04b4f48f
+SHA256: 102459e1314ada6e289f6a5e0fa98dfee28ad9d1d0ff80c87786c89f2f0e2aa6
 Encoding: ASCII
 
 FILE CONTENT:
 ----------------------------------------
-import db from "../db.js";
-import bcrypt from "bcrypt";
+import db from "../db.js"; // [cite: 15]
+import bcrypt from "bcrypt"; // [cite: 16]
+import dns from "dns/promises";
 
-const saltRound = Number(process.env.SALT_ROUND);
+const saltRound = Number(process.env.SALT_ROUND); // [cite: 16]
 
-async function handleRegister(req, res) {
+// 1. Array of banned placeholder domains and exact emails
+const EMAIL_BLOCKLIST = [
+  "example.com",
+  "test.com",
+  "domain.com",
+  "mailinator.com", // Common disposable email service
+  "10minutemail.com",
+  "placeholder.com",
+  "abc.com",
+  "xyz.com"
+];
+
+async function validateEmailLegitimacy(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) return { valid: false, message: "Invalid email format structure." };
+
+  const lowerCaseEmail = email.toLowerCase().trim();
+  const domain = lowerCaseEmail.split("@")[1];
+
+  if (EMAIL_BLOCKLIST.includes(domain) || lowerCaseEmail === "test@1234") {
+    return { valid: false, message: "Registration error: Dummy, testing, or placeholder domains are not allowed." };
+  }
 
   try {
+    const mxRecords = await dns.resolveMx(domain);
+    if (!mxRecords || mxRecords.length === 0) {
+      return { valid: false, message: "Registration error: This domain does not have active mail servers." };
+    }
+  } catch (error) {
 
+    return { valid: false, message: "Registration error: The email domain does not exist." };
+  }
+
+  return { valid: true };
+}
+
+async function handleRegister(req, res) {
+  try {
     const username = req.body.username;
     const password = req.body.password;
+
+    const emailCheck = await validateEmailLegitimacy(username);
+    if (!emailCheck.valid) {
+      return res.status(400).send(emailCheck.message);
+    }
+
+    if (!password || password.length < 6) {
+      return res.status(400).send("Registration error: Password must be at least 6 characters long.");
+    }
 
     const dbResult = await db.query(
       "SELECT * FROM users WHERE email=$1",
@@ -238,28 +282,22 @@ async function handleRegister(req, res) {
     );
 
     if (dbResult.rows.length === 0) {
-
       const hashedPass = await bcrypt.hash(password, saltRound);
-
       await db.query(
         "INSERT INTO users(email,password) VALUES($1,$2)",
         [username, hashedPass]
       );
-
     }
 
     res.redirect("/login");
 
   } catch (err) {
-
-    console.log(err);
+    console.error(err);
     res.send("Registration error");
-
   }
-
 }
 
-export {handleRegister};
+export { handleRegister }; 
 ================================================================================
 
 
@@ -1122,15 +1160,15 @@ FILE: public/css/style.css
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 14.02 KB
+Size: 14.13 KB
 Extension: .css
 Language: css
 Location: public/css/style.css
 Relative Path: public/css
 Created: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-30 21:01:29 (Asia/Calcutta / GMT+06:30)
-MD5: 679cca8c93f32ded59e1b45f8c9b13bd
-SHA256: 3b216d82795f35ed3b1db177398475df927e80e7a3fb310fff893741aaf7ded2
+Modified: 2026-05-31 13:04:08 (Asia/Calcutta / GMT+06:30)
+MD5: a9f99cad0472be5da8ed6db526e570c0
+SHA256: 16292836fa69cc9079a0b010ecb6651db19831fada9981a6229c0b6f423ea337
 Encoding: UTF-8
 
 FILE CONTENT:
@@ -1931,6 +1969,14 @@ input::placeholder {
   border-radius: var(--radius);
   font-size: 13px;
   margin-bottom: 16px;
+}
+
+.footer a svg {
+  transition: color 0.15s;
+}
+
+.footer a:hover {
+  color: var(--accent) !important;
 }
 ================================================================================
 
