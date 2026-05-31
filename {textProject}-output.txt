@@ -5,7 +5,7 @@ PROJECT EXPORT FOR LLMs
 PROJECT INFORMATION:
 --------------------------------------------------
 Project Name: Splitter
-Generated On: 2026-05-31 04:45:54 (Asia/Calcutta / GMT+06:30)
+Generated On: 2026-05-31 04:50:23 (Asia/Calcutta / GMT+06:30)
 Total Files Processed: 32
 Export Tool: Easy Whole Project to Single Text File for LLMs v1.1.0
 Tool Author: Jota / José Guilherme Pandolfi
@@ -23,7 +23,7 @@ Custom File Name Pattern: {textProject}-output
 PROJECT STRUCTURE
 ================================================================================
 ├── 📁 config/
-│   └── 📄 passport.js (2.64 KB)
+│   └── 📄 passport.js (2.73 KB)
 ├── 📁 controller/
 │   ├── 📄 authController.js (759 B)
 │   ├── 📄 eventController.js (4.83 KB)
@@ -73,7 +73,7 @@ Total Files: 32
 Total Directories: 11
 Text Files: 22
 Binary Files: 10
-Total Size: 143.55 KB
+Total Size: 143.63 KB
 
 FILE TYPES DISTRIBUTION:
 ------------------------------
@@ -95,15 +95,15 @@ FILE: config/passport.js
 
 FILE INFORMATION:
 ----------------------------------------
-Size: 2.64 KB
+Size: 2.73 KB
 Extension: .js
 Language: javascript
 Location: config/passport.js
 Relative Path: config
 Created: 2026-05-30 12:17:31 (Asia/Calcutta / GMT+06:30)
-Modified: 2026-05-31 04:45:53 (Asia/Calcutta / GMT+06:30)
-MD5: ec9d4361afe5e590e6abd5aa92947961
-SHA256: f5b7006e5ff88dec7719edf320aedab04cc83cfc7d9010b721472f93cc45c522
+Modified: 2026-05-31 04:50:22 (Asia/Calcutta / GMT+06:30)
+MD5: c0e12b3955a85f792d59d87b01e3ad6a
+SHA256: 947e4f255e481fa8b2269f18a121c5c7b9de0711451f83fdbd4b2d17c5aaa507
 Encoding: ASCII
 
 FILE CONTENT:
@@ -151,7 +151,8 @@ export default function passportConfigurations() {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "https://splitter-weog.onrender.com/auth/google/callback"
+    // callbackURL: "/auth/google/callback" // developement 
+    callbackURL: "https://splitter-weog.onrender.com/auth/google/callback" // deployement redirect 
   },
     async (accessToken, refreshToken, profile, done) => {
       try {
