@@ -1,15 +1,14 @@
-import db from "../db.js"; // [cite: 15]
-import bcrypt from "bcrypt"; // [cite: 16]
+import db from "../db.js"; 
+import bcrypt from "bcrypt"; 
 import dns from "dns/promises";
 
-const saltRound = Number(process.env.SALT_ROUND); // [cite: 16]
+const saltRound = Number(process.env.SALT_ROUND); 
 
-// 1. Array of banned placeholder domains and exact emails
 const EMAIL_BLOCKLIST = [
   "example.com",
   "test.com",
   "domain.com",
-  "mailinator.com", // Common disposable email service
+  "mailinator.com", 
   "10minutemail.com",
   "placeholder.com",
   "abc.com",
@@ -33,7 +32,6 @@ async function validateEmailLegitimacy(email) {
       return { valid: false, message: "Registration error: This domain does not have active mail servers." };
     }
   } catch (error) {
-
     return { valid: false, message: "Registration error: The email domain does not exist." };
   }
 
@@ -42,9 +40,10 @@ async function validateEmailLegitimacy(email) {
 
 async function handleRegister(req, res) { 
   try {
-    const username = req.body.username; 
+    const username = req.body.username?.toLowerCase().trim(); 
     const password = req.body.password; 
 
+    // 1. Run legitimacy validation checks
     const emailCheck = await validateEmailLegitimacy(username);
     if (!emailCheck.valid) {
       return res.status(400).send(emailCheck.message);
@@ -54,25 +53,52 @@ async function handleRegister(req, res) {
       return res.status(400).send("Registration error: Password must be at least 6 characters long.");
     }
 
+    // 2. Query the database to see if this email exists
     const dbResult = await db.query( 
       "SELECT * FROM users WHERE email=$1", 
       [username] 
     );
 
+    const hashedPass = await bcrypt.hash(password, saltRound); 
+
     if (dbResult.rows.length === 0) { 
-      const hashedPass = await bcrypt.hash(password, saltRound); 
+      // CASE A: True new registration -> INSERT standard row
       await db.query( 
-        "INSERT INTO users(email,password) VALUES($1,$2)",
-        [username, hashedPass]
+        "INSERT INTO users(email, password) VALUES($1, $2)", 
+        [username, hashedPass] 
       );
+      return res.redirect("/login?registered=1");
+
+    } else {
+      const existingUser = dbResult.rows[0];
+
+      // CASE B: User signed up via Google originally but has no local password yet
+      if (existingUser.google_id && !existingUser.password) {
+        await db.query(
+          "UPDATE users SET password = $1 WHERE email = $2",
+          [hashedPass, username]
+        );
+        return res.redirect("/login?account_linked=1");
+      }
+      
+      // CASE C: An authenticated user trying to overwrite their password from this route
+      // (Or a malicious/accidental attempt to re-register an existing full profile)
+      if (req.isAuthenticated() && req.user.email === username) {
+        await db.query(
+          "UPDATE users SET password = $1 WHERE email = $2",
+          [hashedPass, username]
+        );
+        return res.redirect("/dashboard?password_updated=1");
+      }
+
+      // CASE D: Standard duplicate email block guard
+      return res.status(400).send("Registration error: An account with this email address already exists.");
     }
 
-    res.redirect("/login");
-
   } catch (err) {
-    console.error(err);
-    res.send("Registration error");
+    console.error("Registration pipeline error:", err);
+    res.status(500).send("Registration error"); 
   }
 }
 
-export { handleRegister }; 
+export { handleRegister };
